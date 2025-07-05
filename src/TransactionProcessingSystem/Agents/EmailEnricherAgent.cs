@@ -1,8 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
-using Microsoft.Graph.Auth;
-using Microsoft.Identity.Client;
+using Azure.Identity;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
@@ -64,14 +63,12 @@ public class EmailEnricherAgent : AgentBase<Transaction, Transaction>
     {
         try
         {
-            var app = ConfidentialClientApplicationBuilder
-                .Create(_settings.ClientId)
-                .WithClientSecret(_settings.ClientSecret)
-                .WithAuthority(new Uri($"https://login.microsoftonline.com/{_settings.TenantId}"))
-                .Build();
+            var credential = new ClientSecretCredential(
+                _settings.TenantId,
+                _settings.ClientId,
+                _settings.ClientSecret);
 
-            var authProvider = new ClientCredentialProvider(app);
-            return new GraphServiceClient(authProvider);
+            return new GraphServiceClient(credential);
         }
         catch (Exception ex)
         {
@@ -89,22 +86,24 @@ public class EmailEnricherAgent : AgentBase<Transaction, Transaction>
 
             var filter = $"receivedDateTime ge {startDate:yyyy-MM-ddTHH:mm:ssZ} and receivedDateTime le {endDate:yyyy-MM-ddTHH:mm:ssZ}";
 
-            var messages = await _graphClient.Me.Messages
-                .Request()
-                .Filter(filter)
-                .Select("subject,bodyPreview,receivedDateTime")
-                .Top(50)
-                .GetAsync();
+            var messagesRequest = _graphClient.Me.Messages.GetAsync(requestConfiguration =>
+            {
+                requestConfiguration.QueryParameters.Filter = filter;
+                requestConfiguration.QueryParameters.Select = new[] { "subject", "bodyPreview", "receivedDateTime" };
+                requestConfiguration.QueryParameters.Top = 50;
+            });
 
-            var emailMatches = messages
+            var messages = await messagesRequest;
+
+            var emailMatches = messages?.Value?
                 .Where(m => m.Subject != null && m.BodyPreview != null)
                 .Select(m => new EmailMatch
                 {
-                    Subject = m.Subject,
-                    Snippet = m.BodyPreview,
+                    Subject = m.Subject!,
+                    Snippet = m.BodyPreview!,
                     ReceivedDateTime = m.ReceivedDateTime?.DateTime ?? DateTime.MinValue
                 })
-                .ToList();
+                .ToList() ?? new List<EmailMatch>();
 
             _logger.LogDebug("Found {Count} emails in date range for transaction {Id}", 
                 emailMatches.Count, transaction.Id);

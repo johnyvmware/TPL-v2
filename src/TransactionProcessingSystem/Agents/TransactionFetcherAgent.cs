@@ -110,6 +110,7 @@ public class TransactionFetcherAgent : AgentBase<string, IEnumerable<Transaction
             };
         }).ToList();
 
+        await Task.CompletedTask; // Ensure async compliance
         return transactions;
     }
 }

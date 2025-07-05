@@ -1,4 +1,8 @@
 using Microsoft.Extensions.Logging;
+using OpenAI;
+using OpenAI.Managers;
+using OpenAI.ObjectModels.RequestModels;
+using OpenAI.ObjectModels;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
@@ -6,7 +10,9 @@ namespace TransactionProcessingSystem.Agents;
 
 public class CategorizerAgent : AgentBase<Transaction, Transaction>
 {
+    private readonly OpenAIService _openAIService;
     private readonly OpenAISettings _settings;
+    
     private static readonly string SystemPrompt = """
         You are a financial transaction categorizer. Analyze transaction descriptions and categorize them into one of these categories:
         
@@ -43,6 +49,10 @@ public class CategorizerAgent : AgentBase<Transaction, Transaction>
         : base(logger, boundedCapacity)
     {
         _settings = settings;
+        _openAIService = new OpenAIService(new OpenAiOptions()
+        {
+            ApiKey = _settings.ApiKey
+        });
     }
 
     protected override async Task<Transaction> ProcessAsync(Transaction transaction)
@@ -52,12 +62,7 @@ public class CategorizerAgent : AgentBase<Transaction, Transaction>
 
         try
         {
-            // For this demo, we'll use rule-based categorization
-            // In a real implementation, this would call OpenAI API
-            _logger.LogDebug("Categorizing transaction {Id} using rule-based approach (OpenAI integration disabled for demo)", 
-                transaction.Id);
-            
-            var category = GetFallbackCategory(transaction);
+            var category = await CategorizeWithOpenAI(transaction);
             
             var categorizedTransaction = transaction with
             {
@@ -72,19 +77,45 @@ public class CategorizerAgent : AgentBase<Transaction, Transaction>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to categorize transaction {Id}", transaction.Id);
+            _logger.LogError(ex, "Failed to categorize transaction {Id} with OpenAI, using fallback", transaction.Id);
             
+            // Fallback to rule-based categorization only on error
+            var fallbackCategory = GetFallbackCategory(transaction);
             return transaction with 
             { 
-                Category = "Other", 
+                Category = fallbackCategory, 
                 Status = ProcessingStatus.Categorized 
             };
         }
     }
 
-    // Note: OpenAI integration is disabled for this demo
-    // In a real implementation, this method would call the OpenAI API
-    // using the SystemPrompt and BuildUserMessage method
+    private async Task<string> CategorizeWithOpenAI(Transaction transaction)
+    {
+        var userMessage = BuildUserMessage(transaction);
+        
+        var chatRequest = new ChatCompletionCreateRequest
+        {
+            Model = OpenAI.ObjectModels.Models.Gpt_3_5_Turbo,
+            Messages = new List<ChatMessage>
+            {
+                ChatMessage.FromSystem(SystemPrompt),
+                ChatMessage.FromUser(userMessage)
+            },
+            MaxTokens = _settings.MaxTokens,
+            Temperature = (float)_settings.Temperature
+        };
+
+        var response = await _openAIService.ChatCompletion.CreateCompletion(chatRequest);
+        
+        if (response?.Successful != true || response.Choices?.FirstOrDefault()?.Message?.Content == null)
+        {
+            _logger.LogWarning("Invalid response from OpenAI for transaction {Id}", transaction.Id);
+            throw new InvalidOperationException($"OpenAI API returned invalid response: {response?.Error?.Message}");
+        }
+
+        var category = response.Choices.First().Message.Content!.Trim();
+        return ValidateCategory(category);
+    }
 
     private string BuildUserMessage(Transaction transaction)
     {

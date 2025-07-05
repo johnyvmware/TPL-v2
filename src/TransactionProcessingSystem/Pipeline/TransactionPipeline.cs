@@ -136,10 +136,10 @@ public class TransactionPipeline : IDisposable
 public record PipelineResult
 {
     public required DateTime StartTime { get; init; }
-    public DateTime EndTime { get; init; }
-    public TimeSpan Duration { get; init; }
+    public DateTime EndTime { get; set; }
+    public TimeSpan Duration { get; set; }
     public required string Endpoint { get; init; }
-    public bool Success { get; init; }
-    public string? ErrorMessage { get; init; }
-    public int TransactionsProcessed { get; init; }
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+    public int TransactionsProcessed { get; set; }
 }

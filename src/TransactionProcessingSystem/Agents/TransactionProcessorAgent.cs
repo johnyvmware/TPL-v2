@@ -39,6 +39,7 @@ public class TransactionProcessorAgent : AgentBase<Transaction, Transaction>
             _logger.LogDebug("Processed transaction {Id}: '{Original}' -> '{Clean}'", 
                 transaction.Id, transaction.Description, cleanDescription);
 
+            await Task.CompletedTask; // Ensure async compliance
             return processedTransaction;
         }
         catch (Exception ex)

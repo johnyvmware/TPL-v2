@@ -11,7 +11,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
 {
     private readonly OpenAIClient _openAIClient;
     private readonly OpenAISettings _settings;
-    
+
     private static readonly string SystemPrompt = """
         You are a financial transaction categorizer. Analyze transaction descriptions and categorize them into one of the predefined categories.
         
@@ -80,7 +80,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
     public Categorizer(
         OpenAISettings settings,
         ILogger<Categorizer> logger,
-        int boundedCapacity = 100) 
+        int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {
         _settings = settings;
@@ -89,20 +89,20 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
 
     protected override async Task<Transaction> ProcessAsync(Transaction transaction)
     {
-        _logger.LogDebug("Categorizing transaction {Id}: {Description}", 
+        _logger.LogDebug("Categorizing transaction {Id}: {Description}",
             transaction.Id, transaction.CleanDescription ?? transaction.Description);
 
         try
         {
             var category = await CategorizeWithOpenAI(transaction);
-            
+
             var categorizedTransaction = transaction with
             {
                 Category = category,
                 Status = ProcessingStatus.Categorized
             };
 
-            _logger.LogDebug("Categorized transaction {Id} as: {Category}", 
+            _logger.LogDebug("Categorized transaction {Id} as: {Category}",
                 transaction.Id, category);
 
             return categorizedTransaction;
@@ -110,13 +110,13 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to categorize transaction {Id} with OpenAI, using fallback", transaction.Id);
-            
+
             // Fallback to rule-based categorization only on error
             var fallbackCategory = GetFallbackCategory(transaction);
-            return transaction with 
-            { 
-                Category = fallbackCategory, 
-                Status = ProcessingStatus.Categorized 
+            return transaction with
+            {
+                Category = fallbackCategory,
+                Status = ProcessingStatus.Categorized
             };
         }
     }
@@ -124,7 +124,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
     private async Task<string> CategorizeWithOpenAI(Transaction transaction)
     {
         var userMessage = BuildUserMessage(transaction);
-        
+
         List<ChatMessage> messages = [
             new SystemChatMessage(SystemPrompt),
             new UserChatMessage(userMessage)
@@ -143,7 +143,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
 
         var model = !string.IsNullOrEmpty(_settings.Model) ? _settings.Model : "gpt-4o-mini";
         var completion = await _openAIClient.GetChatClient(model).CompleteChatAsync(messages, options);
-        
+
         if (completion?.Value?.Content == null || completion.Value.Content.Count == 0)
         {
             _logger.LogWarning("Invalid response from OpenAI for transaction {Id}", transaction.Id);
@@ -151,7 +151,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
         }
 
         var content = completion.Value.Content[0].Text;
-        
+
         // Parse structured JSON response
         return ParseStructuredJsonResponse(transaction.Id, content);
     }
@@ -168,7 +168,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
             "gpt-3.5-turbo"
         };
 
-        return jsonCapableModels.Any(supportedModel => 
+        return jsonCapableModels.Any(supportedModel =>
             model.StartsWith(supportedModel, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -177,7 +177,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
         try
         {
             using JsonDocument structuredJson = JsonDocument.Parse(jsonContent);
-            
+
             var category = structuredJson.RootElement.GetProperty("category").GetString();
             var confidence = structuredJson.RootElement.GetProperty("confidence").GetDouble();
             var reasoning = structuredJson.RootElement.GetProperty("reasoning").GetString();
@@ -187,24 +187,24 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
                 throw new InvalidOperationException("Category field is missing or empty in JSON response");
             }
 
-            _logger.LogDebug("OpenAI categorization for transaction {Id}: {Category} (confidence: {Confidence:P1}, reasoning: {Reasoning})", 
+            _logger.LogDebug("OpenAI categorization for transaction {Id}: {Category} (confidence: {Confidence:P1}, reasoning: {Reasoning})",
                 transactionId, category, confidence, reasoning);
 
             return ValidateCategory(category);
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse structured JSON response from OpenAI for transaction {Id}. Response: {Response}", 
+            _logger.LogWarning(ex, "Failed to parse structured JSON response from OpenAI for transaction {Id}. Response: {Response}",
                 transactionId, jsonContent);
-            
+
             // Try to extract category from malformed JSON as fallback
             return ExtractCategoryFromText(jsonContent);
         }
         catch (KeyNotFoundException ex)
         {
-            _logger.LogWarning(ex, "Required property missing in JSON response for transaction {Id}. Response: {Response}", 
+            _logger.LogWarning(ex, "Required property missing in JSON response for transaction {Id}. Response: {Response}",
                 transactionId, jsonContent);
-            
+
             return ExtractCategoryFromText(jsonContent);
         }
     }
@@ -233,7 +233,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
         var validCategories = new[]
         {
             "Food & Dining",
-            "Transportation", 
+            "Transportation",
             "Shopping",
             "Utilities",
             "Entertainment",
@@ -246,17 +246,17 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
         };
 
         // Find exact match
-        var exactMatch = validCategories.FirstOrDefault(c => 
+        var exactMatch = validCategories.FirstOrDefault(c =>
             string.Equals(c, category, StringComparison.OrdinalIgnoreCase));
-        
+
         if (exactMatch != null)
             return exactMatch;
 
         // Find partial match
-        var partialMatch = validCategories.FirstOrDefault(c => 
+        var partialMatch = validCategories.FirstOrDefault(c =>
             c.Contains(category, StringComparison.OrdinalIgnoreCase) ||
             category.Contains(c, StringComparison.OrdinalIgnoreCase));
-        
+
         if (partialMatch != null)
             return partialMatch;
 
@@ -267,7 +267,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
     private string GetFallbackCategory(Transaction transaction)
     {
         var description = (transaction.CleanDescription ?? transaction.Description).ToLower();
-        
+
         var categoryKeywords = new Dictionary<string, string[]>
         {
             ["Food & Dining"] = ["restaurant", "food", "cafe", "pizza", "burger", "starbucks", "mcdonald", "dining"],
@@ -297,7 +297,7 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
         var validCategories = new[]
         {
             "Food & Dining",
-            "Transportation", 
+            "Transportation",
             "Shopping",
             "Utilities",
             "Entertainment",

@@ -98,7 +98,7 @@ public class MockTransactionApiService : BackgroundService
         response.ContentType = "application/json";
         response.StatusCode = 200;
         await WriteResponse(response, json);
-        
+
         _logger.LogInformation("Served {Count} mock transactions", mockTransactions.Count());
     }
 

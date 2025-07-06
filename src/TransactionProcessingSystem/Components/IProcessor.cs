@@ -21,7 +21,7 @@ public abstract class ProcessorBase<TInput, TOutput> : IProcessor<TInput, TOutpu
     {
         _logger = logger;
         _cancellationTokenSource = new CancellationTokenSource();
-        
+
         var options = new ExecutionDataflowBlockOptions
         {
             BoundedCapacity = boundedCapacity,
@@ -30,7 +30,7 @@ public abstract class ProcessorBase<TInput, TOutput> : IProcessor<TInput, TOutpu
         };
 
         _block = new TransformBlock<TInput, TOutput>(
-            async input => await ProcessAsync(input), 
+            async input => await ProcessAsync(input),
             options);
     }
 

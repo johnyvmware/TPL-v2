@@ -60,7 +60,7 @@ public class TransactionPipeline : IDisposable
     public async Task<PipelineResult> ProcessTransactionsAsync(string endpoint, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting transaction processing pipeline for endpoint: {Endpoint}", endpoint);
-        
+
         var startTime = DateTime.UtcNow;
         var result = new PipelineResult
         {

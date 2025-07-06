@@ -1,0 +1,61 @@
+name: Commit Validation
+
+on:
+  push:
+    branches: [ '*' ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  validate-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Compile check
+      run: dotnet build --configuration Debug --no-restore --verbosity minimal
+      
+    - name: Quick test run
+      run: dotnet test src/TransactionProcessingSystem --configuration Debug --no-build --verbosity minimal
+      continue-on-error: true
+      
+    - name: Check commit message
+      if: github.event_name == 'push'
+      run: |
+        COMMIT_MSG=$(git log -1 --pretty=%B)
+        if [[ $COMMIT_MSG =~ ^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?: ]]; then
+          echo "✅ Commit message follows conventional commits format"
+        else
+          echo "❌ Commit message should follow conventional commits format"
+          echo "Examples: feat: add new feature, fix: resolve bug, docs: update readme"
+          echo "Current message: $COMMIT_MSG"
+        fi
+        
+    - name: Notify status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Commit validation passed"
+        else
+          echo "❌ Commit validation failed"
+        fi

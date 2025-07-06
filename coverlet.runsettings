@@ -4,14 +4,31 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
-          <Format>cobertura</Format>
-          <Exclude>[coverlet.*.tests?]*,[*]Coverlet.Core*</Exclude>
-          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
-          <ExcludeByFile>**/Migrations/*.cs</ExcludeByFile>
+          <!-- Output formats -->
+          <Format>cobertura,lcov,json,opencover</Format>
+          
+          <!-- Exclude patterns -->
+          <Exclude>[*.Tests]*,[*.Tests.*]*,[coverlet.*.tests?]*,[*]Coverlet.Core*</Exclude>
+          
+          <!-- Exclude by attributes -->
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+          
+          <!-- Exclude specific files -->
+          <ExcludeByFile>**/Migrations/*.cs,**/obj/**,**/bin/**,**/*AssemblyInfo.cs</ExcludeByFile>
+          
+          <!-- Include source directory -->
           <IncludeDirectory>../src/</IncludeDirectory>
+          
+          <!-- Coverage settings -->
           <SingleHit>false</SingleHit>
           <UseSourceLink>true</UseSourceLink>
           <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SkipAutoProps>true</SkipAutoProps>
+          
+          <!-- Thresholds -->
+          <Threshold>80</Threshold>
+          <ThresholdType>line,branch</ThresholdType>
+          <ThresholdStat>minimum</ThresholdStat>
         </Configuration>
       </DataCollector>
     </DataCollectors>

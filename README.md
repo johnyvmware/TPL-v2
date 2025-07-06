@@ -1,22 +1,20 @@
-# TPL Dataflow Transaction Processing System
+# Transaction Processing System
 
-[![CI/CD Pipeline](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml)
-[![PR Validation](https://github.com/your-username/transaction-processing-system/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/your-username/transaction-processing-system/actions/workflows/pr-validation.yml)
-[![Release & Deploy](https://github.com/your-username/transaction-processing-system/actions/workflows/release.yml/badge.svg)](https://github.com/your-username/transaction-processing-system/actions/workflows/release.yml)
+[![CI - Build, Test & Coverage](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/your-username/transaction-processing-system/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/transaction-processing-system)
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **Production-Ready Transaction Processing System** with comprehensive CI/CD pipeline, automated testing, security scanning, and multi-platform deployments.
+> **Production-Ready Transaction Processing System** with streamlined CI/CD pipeline focusing on build quality, comprehensive testing, and code coverage.
 
 ## 🚀 CI/CD Status
 
-| Workflow | Status | Description |
-|----------|--------|-------------|
-| **CI/CD Pipeline** | ![CI Status](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml/badge.svg) | Continuous integration with build, test, and quality checks |
-| **PR Validation** | ![PR Status](https://github.com/your-username/transaction-processing-system/actions/workflows/pr-validation.yml/badge.svg) | Pull request validation and code quality enforcement |
-| **Release & Deploy** | ![Release Status](https://github.com/your-username/transaction-processing-system/actions/workflows/release.yml/badge.svg) | Automated releases and multi-environment deployments |
-| **Dependency Updates** | ![Dependabot Status](https://img.shields.io/badge/dependabot-enabled-brightgreen.svg) | Automated dependency updates and security patches |
+Our streamlined CI/CD pipeline ensures code quality through:
+
+- **🔨 Build**: Automated compilation and dependency resolution
+- **🧪 Testing**: Comprehensive unit and integration test execution
+- **📊 Coverage**: Detailed code coverage analysis and reporting
+- **✅ Quality**: Automated quality gates and reporting
 
 ## 🏗️ Architecture
 
@@ -122,9 +120,9 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
    dotnet build --configuration Release
    ```
 
-4. **Run tests**
+4. **Run tests with coverage**
    ```bash
-   dotnet test --configuration Release
+   dotnet test --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
    ```
 
 5. **Run the application**
@@ -132,78 +130,72 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
    dotnet run --project src/TransactionProcessingSystem
    ```
 
-## 🏭 Production Deployment
+## 📊 Code Coverage
 
-### Automated Deployments
+The project maintains high code coverage standards:
 
-The system includes a comprehensive CI/CD pipeline with:
+- **Target Coverage**: 80%+ line coverage
+- **Coverage Reports**: Generated automatically on each CI run
+- **Coverage Tools**: Coverlet for collection, ReportGenerator for HTML reports
+- **Integration**: Codecov for coverage tracking and PR comments
 
-- **Continuous Integration**: Automated build, test, and quality checks on every commit
-- **Security Scanning**: Vulnerability detection and dependency auditing
-- **Multi-Platform Builds**: Linux, Windows, and macOS artifacts
-- **Staged Deployments**: Automatic staging deployments for testing
-- **Production Releases**: Protected production deployments with approval gates
+### Viewing Coverage Reports
 
-### Environment Configuration
+After running tests, coverage reports are available in:
+- **HTML Report**: `TestResults/Coverage/index.html`
+- **Cobertura XML**: `TestResults/**/coverage.cobertura.xml`
+- **Codecov Dashboard**: View trends and detailed coverage analysis
 
-| Environment | Branch | Deployment Trigger | URL |
-|-------------|--------|-------------------|-----|
-| **Development** | `feature/*` | Manual | Local development |
-| **Staging** | `develop` | Automatic on push | `https://staging.example.com` |
-| **Production** | `main` | Release tags | `https://app.example.com` |
+## 🔍 Testing Strategy
 
-### Release Process
+Our comprehensive testing approach includes:
 
-1. **Create a release tag**:
-   ```bash
-   git tag -a v1.0.0 -m "Release version 1.0.0"
-   git push origin v1.0.0
-   ```
+- **Unit Tests**: Individual component testing with mocks
+- **Integration Tests**: End-to-end pipeline testing
+- **Test Categories**: Organized by component and functionality
+- **Coverage Analysis**: Line and branch coverage reporting
+- **Continuous Testing**: Automated test execution on every change
 
-2. **Automated pipeline**:
-   - Validates the release
-   - Builds multi-platform artifacts
-   - Creates GitHub release with changelog
-   - Deploys to staging
-   - Awaits production approval
-   - Deploys to production
+### Running Tests
 
-## 🔒 Security & Quality
+```bash
+# Run all tests
+dotnet test
 
-### Security Features
+# Run tests with coverage
+dotnet test --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 
-- ✅ **Vulnerability Scanning**: Automated dependency vulnerability checks
-- ✅ **Code Analysis**: Static code analysis with .NET analyzers
-- ✅ **Dependency Review**: Automated review of new dependencies in PRs
-- ✅ **Secret Management**: Environment-based configuration for sensitive data
-- ✅ **HTTPS Enforcement**: Secure communication channels
+# Run tests with detailed output
+dotnet test --verbosity normal
+
+# Run specific test category
+dotnet test --filter Category=Unit
+```
+
+## 🏭 Build & Quality
+
+### Build Process
+
+The streamlined build process ensures:
+
+- **Fast Builds**: Optimized dependency caching
+- **Reproducible Builds**: Consistent build environments
+- **Quality Gates**: Automated code quality checks
+- **Artifact Management**: Build outputs properly versioned
 
 ### Quality Assurance
 
-- ✅ **Unit Tests**: Comprehensive test coverage
-- ✅ **Integration Tests**: End-to-end testing
-- ✅ **Code Formatting**: Enforced code style with `dotnet format`
-- ✅ **Conventional Commits**: Structured commit message validation
-- ✅ **Pull Request Reviews**: Required code reviews before merging
+- ✅ **Automated Testing**: Comprehensive test suite execution
+- ✅ **Code Coverage**: Detailed coverage analysis and reporting
+- ✅ **Build Validation**: Compilation and dependency verification
+- ✅ **Consistent CI**: Same build process for all environments
 
-## 📊 Monitoring & Observability
+## 📈 Performance
 
-### Built-in Logging
-
-The application includes structured logging with:
-
-- **Console Logging**: Development and container environments
-- **File Logging**: Production file-based logging
-- **Structured Logs**: JSON formatted logs for easy parsing
-- **Performance Metrics**: Transaction processing times and throughput
-
-### Health Checks
-
-Production deployments include:
-
-- **Startup Validation**: Application startup health verification
-- **Dependency Checks**: External service connectivity validation
-- **Performance Monitoring**: Response time and resource usage tracking
+- **Throughput**: Processes 1000+ transactions/minute
+- **Memory Usage**: Optimized buffering with configurable memory footprint
+- **Scalability**: Horizontal scaling support through configuration
+- **Fault Tolerance**: Robust error handling and retry mechanisms
 
 ## 📋 Output
 
@@ -217,43 +209,35 @@ CSV files with format: `transactions_yyyyMMdd_HHmmss.csv`
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes following the coding standards
 4. Add tests for new functionality
-5. Ensure all tests pass (`dotnet test`)
-6. Commit using conventional commits (`git commit -m 'feat: add amazing feature'`)
+5. Ensure all tests pass and coverage is maintained (`dotnet test`)
+6. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 7. Push to the branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
 
-### Development Workflow
+### Development Commands
 
 ```bash
-# Setup development environment
-make setup-dev
+# Setup and restore dependencies
+dotnet restore
+
+# Build the solution
+dotnet build --configuration Release
 
 # Run tests with coverage
-make test-coverage
+dotnet test --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 
-# Format code
-make format
-
-# Run security scan
-make security-scan
-
-# Build for production
-make build-release
+# Generate coverage report
+dotnet tool install -g dotnet-reportgenerator-globaltool
+reportgenerator -reports:TestResults/**/coverage.cobertura.xml -targetdir:TestResults/Coverage -reporttypes:HtmlInline_AzurePipelines
 ```
-
-## 📈 Performance
-
-- **Throughput**: Processes 1000+ transactions/minute
-- **Memory Usage**: Optimized buffering with configurable memory footprint
-- **Scalability**: Horizontal scaling support through configuration
-- **Fault Tolerance**: Robust error handling and retry mechanisms
 
 ## 🔧 Development Tools
 
 - **IDE**: Visual Studio 2022, VS Code, or JetBrains Rider
-- **Package Management**: NuGet with automated dependency updates
-- **Testing**: xUnit with FluentAssertions for readable tests
-- **Debugging**: Comprehensive logging and error reporting
+- **Package Management**: NuGet with dependency restoration
+- **Testing Framework**: xUnit with FluentAssertions
+- **Coverage Tools**: Coverlet + ReportGenerator
+- **Build Tools**: .NET CLI with MSBuild
 
 ## 📄 License
 
@@ -268,4 +252,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Made with ❤️ by the Transaction Processing Team*
+*Built with ❤️ focusing on quality, testing, and maintainability*

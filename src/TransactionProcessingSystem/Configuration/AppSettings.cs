@@ -12,9 +12,10 @@ public record AppSettings
 public record OpenAISettings
 {
     public required string ApiKey { get; init; }
-    public string Model { get; init; } = "gpt-3.5-turbo";
-    public int MaxTokens { get; init; } = 150;
-    public double Temperature { get; init; } = 0.3;
+    public string Model { get; init; } = "gpt-4-turbo";
+    public int MaxTokens { get; init; } = 200;
+    public double Temperature { get; init; } = 0.1;
+    public bool UseJsonSchema { get; init; } = true;
 }
 
 public record MicrosoftGraphSettings

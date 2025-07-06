@@ -45,11 +45,13 @@ Enriches transactions with related email data using Microsoft Graph:
   - Financial content detection
 
 ### 4. Categorizer
-Categorizes transactions using OpenAI's ChatGPT:
-- **AI Integration**: Real ChatGPT API with prompt engineering
+Categorizes transactions using OpenAI's ChatGPT with structured JSON responses:
+- **AI Integration**: Real ChatGPT API with GPT-4-turbo model and JSON response formatting
+- **Structured Output**: Prompt-engineered JSON responses with category, confidence score, and reasoning
 - **Categories**: Food & Dining, Transportation, Shopping, Utilities, Entertainment, Healthcare, Education, Travel, Financial Services, Business Services, Other
-- **Fallback Logic**: Rule-based categorization when AI fails
-- **Validation**: Response validation with category normalization
+- **Enhanced Accuracy**: Lower temperature (0.1) and structured prompts for precise categorization
+- **Fallback Logic**: Rule-based categorization when AI fails, with text extraction from malformed JSON
+- **Future-Ready**: Configurable for formal JSON Schema enforcement when SDK supports it
 
 ### 5. CsvExporter
 Exports processed transactions to CSV files:
@@ -68,9 +70,10 @@ Configure the system through `appsettings.json`:
 {
   "OpenAI": {
     "ApiKey": "your-openai-api-key",
-    "Model": "gpt-3.5-turbo",
-    "MaxTokens": 150,
-    "Temperature": 0.3
+    "Model": "gpt-4-turbo",
+    "MaxTokens": 200,
+    "Temperature": 0.1,
+    "UseJsonSchema": true
   },
   "MicrosoftGraph": {
     "ClientId": "your-azure-app-client-id",
@@ -166,10 +169,12 @@ txn_123,2024-01-15,45.67,STARBUCKS STORE #1234 SEATTLE WA,Starbucks Store Seattl
 - **Rate Limiting**: Respects Graph API throttling limits
 
 ### OpenAI ChatGPT
-- **Model**: GPT-3.5-turbo for transaction categorization
-- **Prompt Engineering**: Optimized system prompts with examples
-- **Token Management**: Configurable token limits
-- **Error Handling**: Fallback categorization on API failures
+- **Model**: GPT-4-turbo with structured JSON response formatting
+- **JSON Response Engineering**: Prompt-driven consistent response format with category, confidence, and reasoning
+- **Prompt Engineering**: Optimized system prompts with structured output requirements
+- **Response Validation**: Automatic JSON parsing with fallback text extraction
+- **Token Management**: Configurable token limits (200 tokens default)
+- **Error Handling**: Multi-layer fallback including rule-based categorization
 
 ## Output Files
 

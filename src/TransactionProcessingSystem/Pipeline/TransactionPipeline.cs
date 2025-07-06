@@ -1,6 +1,6 @@
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
-using TransactionProcessingSystem.Agents;
+using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 

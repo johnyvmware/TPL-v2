@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using TransactionProcessingSystem.Agents;
+using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Pipeline;
 using TransactionProcessingSystem.Services;

@@ -5,9 +5,9 @@ using Azure.Identity;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
-namespace TransactionProcessingSystem.Agents;
+namespace TransactionProcessingSystem.Components;
 
-public class EmailEnricher : AgentBase<Transaction, Transaction>
+public class EmailEnricher : ProcessorBase<Transaction, Transaction>
 {
     private readonly GraphServiceClient _graphClient;
     private readonly MicrosoftGraphSettings _settings;

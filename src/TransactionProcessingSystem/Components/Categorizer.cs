@@ -5,9 +5,9 @@ using System.Text.Json;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
-namespace TransactionProcessingSystem.Agents;
+namespace TransactionProcessingSystem.Components;
 
-public class Categorizer : AgentBase<Transaction, Transaction>
+public class Categorizer : ProcessorBase<Transaction, Transaction>
 {
     private readonly OpenAIClient _openAIClient;
     private readonly OpenAISettings _settings;
@@ -135,14 +135,11 @@ public class Categorizer : AgentBase<Transaction, Transaction>
             Temperature = (float)_settings.Temperature
         };
 
-        // Use JSON Schema enforcement if enabled
-        if (_settings.UseJsonSchema)
-        {
-            options.ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
-                jsonSchemaFormatName: "transaction_categorization",
-                jsonSchema: BinaryData.FromString(CategoryJsonSchema),
-                jsonSchemaIsStrict: true);
-        }
+        // Always use JSON Schema enforcement for structured output
+        options.ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+            jsonSchemaFormatName: "transaction_categorization",
+            jsonSchema: BinaryData.FromString(CategoryJsonSchema),
+            jsonSchemaIsStrict: true);
 
         var model = !string.IsNullOrEmpty(_settings.Model) ? _settings.Model : "gpt-4o-mini";
         var completion = await _openAIClient.GetChatClient(model).CompleteChatAsync(messages, options);
@@ -155,15 +152,8 @@ public class Categorizer : AgentBase<Transaction, Transaction>
 
         var content = completion.Value.Content[0].Text;
         
-        // Parse response based on whether we're using JSON schema
-        if (_settings.UseJsonSchema)
-        {
-            return ParseStructuredJsonResponse(transaction.Id, content);
-        }
-        else
-        {
-            return ValidateCategory(content);
-        }
+        // Parse structured JSON response
+        return ParseStructuredJsonResponse(transaction.Id, content);
     }
 
     private bool IsJsonSchemaSupported(string model)

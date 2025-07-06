@@ -15,7 +15,6 @@ public record OpenAISettings
     public string Model { get; init; } = "gpt-4o-mini";
     public int MaxTokens { get; init; } = 200;
     public double Temperature { get; init; } = 0.1;
-    public bool UseJsonSchema { get; init; } = true;
 }
 
 public record MicrosoftGraphSettings

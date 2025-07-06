@@ -1,9 +1,9 @@
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
 
-namespace TransactionProcessingSystem.Agents;
+namespace TransactionProcessingSystem.Components;
 
-public interface IAgent<TInput, TOutput>
+public interface IProcessor<TInput, TOutput>
 {
     ITargetBlock<TInput> InputBlock { get; }
     ISourceBlock<TOutput> OutputBlock { get; }
@@ -11,13 +11,13 @@ public interface IAgent<TInput, TOutput>
     void Complete();
 }
 
-public abstract class AgentBase<TInput, TOutput> : IAgent<TInput, TOutput>
+public abstract class ProcessorBase<TInput, TOutput> : IProcessor<TInput, TOutput>
 {
     protected readonly TransformBlock<TInput, TOutput> _block;
     protected readonly CancellationTokenSource _cancellationTokenSource;
     protected readonly ILogger _logger;
 
-    protected AgentBase(ILogger logger, int boundedCapacity = 100)
+    protected ProcessorBase(ILogger logger, int boundedCapacity = 100)
     {
         _logger = logger;
         _cancellationTokenSource = new CancellationTokenSource();

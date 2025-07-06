@@ -3,9 +3,9 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Models;
 
-namespace TransactionProcessingSystem.Agents;
+namespace TransactionProcessingSystem.Components;
 
-public class TransactionProcessor : AgentBase<Transaction, Transaction>
+public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
 {
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex SpecialCharsRegex = new(@"[^\w\s\-\.\,\$\&\@\#\%\(\)]", RegexOptions.Compiled);

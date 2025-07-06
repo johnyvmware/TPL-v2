@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
-namespace TransactionProcessingSystem.Agents;
+namespace TransactionProcessingSystem.Components;
 
 public class CsvExporter : IDisposable
 {

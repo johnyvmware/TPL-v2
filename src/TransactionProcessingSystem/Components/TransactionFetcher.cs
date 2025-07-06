@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
-namespace TransactionProcessingSystem.Agents;
+namespace TransactionProcessingSystem.Components;
 
-public class TransactionFetcher : AgentBase<string, IEnumerable<Transaction>>
+public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>>
 {
     private readonly HttpClient _httpClient;
     private readonly TransactionApiSettings _settings;

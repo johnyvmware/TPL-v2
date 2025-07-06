@@ -8,28 +8,28 @@ namespace TransactionProcessingSystem.Pipeline;
 
 public class TransactionPipeline : IDisposable
 {
-    private readonly TransactionFetcherAgent _fetcherAgent;
-    private readonly TransactionProcessorAgent _processorAgent;
-    private readonly EmailEnricherAgent _enricherAgent;
-    private readonly CategorizerAgent _categorizerAgent;
-    private readonly CsvExporterAgent _exporterAgent;
+    private readonly TransactionFetcher _fetcher;
+    private readonly TransactionProcessor _processor;
+    private readonly EmailEnricher _enricher;
+    private readonly Categorizer _categorizer;
+    private readonly CsvExporter _exporter;
     private readonly ILogger<TransactionPipeline> _logger;
     private readonly PipelineSettings _settings;
 
     public TransactionPipeline(
-        TransactionFetcherAgent fetcherAgent,
-        TransactionProcessorAgent processorAgent,
-        EmailEnricherAgent enricherAgent,
-        CategorizerAgent categorizerAgent,
-        CsvExporterAgent exporterAgent,
+        TransactionFetcher fetcher,
+        TransactionProcessor processor,
+        EmailEnricher enricher,
+        Categorizer categorizer,
+        CsvExporter exporter,
         PipelineSettings settings,
         ILogger<TransactionPipeline> logger)
     {
-        _fetcherAgent = fetcherAgent;
-        _processorAgent = processorAgent;
-        _enricherAgent = enricherAgent;
-        _categorizerAgent = categorizerAgent;
-        _exporterAgent = exporterAgent;
+        _fetcher = fetcher;
+        _processor = processor;
+        _enricher = enricher;
+        _categorizer = categorizer;
+        _exporter = exporter;
         _settings = settings;
         _logger = logger;
 
@@ -48,11 +48,11 @@ public class TransactionPipeline : IDisposable
             });
 
         // Connect the pipeline stages
-        _fetcherAgent.OutputBlock.LinkTo(fetcherToProcessor, new DataflowLinkOptions { PropagateCompletion = true });
-        fetcherToProcessor.LinkTo(_processorAgent.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
-        _processorAgent.OutputBlock.LinkTo(_enricherAgent.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
-        _enricherAgent.OutputBlock.LinkTo(_categorizerAgent.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
-        _categorizerAgent.OutputBlock.LinkTo(_exporterAgent.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        _fetcher.OutputBlock.LinkTo(fetcherToProcessor, new DataflowLinkOptions { PropagateCompletion = true });
+        fetcherToProcessor.LinkTo(_processor.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        _processor.OutputBlock.LinkTo(_enricher.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        _enricher.OutputBlock.LinkTo(_categorizer.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        _categorizer.OutputBlock.LinkTo(_exporter.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
 
         _logger.LogInformation("Transaction pipeline connected successfully");
     }
@@ -71,22 +71,22 @@ public class TransactionPipeline : IDisposable
         try
         {
             // Start processing by posting to the fetcher
-            var posted = await _fetcherAgent.InputBlock.SendAsync(endpoint, cancellationToken);
+            var posted = await _fetcher.InputBlock.SendAsync(endpoint, cancellationToken);
             if (!posted)
             {
-                throw new InvalidOperationException("Failed to post endpoint to fetcher agent");
+                throw new InvalidOperationException("Failed to post endpoint to fetcher");
             }
 
             // Signal completion to start the completion propagation
-            _fetcherAgent.Complete();
+            _fetcher.Complete();
 
             // Wait for pipeline completion with timeout
             var completionTask = Task.WhenAll(
-                _fetcherAgent.Completion,
-                _processorAgent.Completion,
-                _enricherAgent.Completion,
-                _categorizerAgent.Completion,
-                _exporterAgent.Completion
+                _fetcher.Completion,
+                _processor.Completion,
+                _enricher.Completion,
+                _categorizer.Completion,
+                _exporter.Completion
             );
 
             var timeoutTask = Task.Delay(TimeSpan.FromMinutes(_settings.TimeoutMinutes), cancellationToken);
@@ -98,7 +98,7 @@ public class TransactionPipeline : IDisposable
             }
 
             // Ensure final flush of exporter
-            await _exporterAgent.FinalFlush();
+            await _exporter.FinalFlush();
 
             result.EndTime = DateTime.UtcNow;
             result.Duration = result.EndTime - result.StartTime;
@@ -125,11 +125,11 @@ public class TransactionPipeline : IDisposable
 
     public void Dispose()
     {
-        _fetcherAgent?.Dispose();
-        _processorAgent?.Dispose();
-        _enricherAgent?.Dispose();
-        _categorizerAgent?.Dispose();
-        _exporterAgent?.Dispose();
+        _fetcher?.Dispose();
+        _processor?.Dispose();
+        _enricher?.Dispose();
+        _categorizer?.Dispose();
+        _exporter?.Dispose();
     }
 }
 

@@ -5,15 +5,15 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Agents;
 
-public class TransactionFetcherAgent : AgentBase<string, IEnumerable<Transaction>>
+public class TransactionFetcher : AgentBase<string, IEnumerable<Transaction>>
 {
     private readonly HttpClient _httpClient;
     private readonly TransactionApiSettings _settings;
 
-    public TransactionFetcherAgent(
+    public TransactionFetcher(
         HttpClient httpClient, 
         TransactionApiSettings settings, 
-        ILogger<TransactionFetcherAgent> logger,
+        ILogger<TransactionFetcher> logger,
         int boundedCapacity = 100) 
         : base(logger, boundedCapacity)
     {

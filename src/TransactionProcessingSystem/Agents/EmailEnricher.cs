@@ -7,15 +7,15 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Agents;
 
-public class EmailEnricherAgent : AgentBase<Transaction, Transaction>
+public class EmailEnricher : AgentBase<Transaction, Transaction>
 {
     private readonly GraphServiceClient _graphClient;
     private readonly MicrosoftGraphSettings _settings;
     private static readonly Regex AmountRegex = new(@"\$?(\d+(?:\.\d{2})?)", RegexOptions.Compiled);
 
-    public EmailEnricherAgent(
+    public EmailEnricher(
         MicrosoftGraphSettings settings,
-        ILogger<EmailEnricherAgent> logger,
+        ILogger<EmailEnricher> logger,
         int boundedCapacity = 100) 
         : base(logger, boundedCapacity)
     {

@@ -8,7 +8,7 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Agents;
 
-public class CategorizerAgent : AgentBase<Transaction, Transaction>
+public class Categorizer : AgentBase<Transaction, Transaction>
 {
     private readonly OpenAIService _openAIService;
     private readonly OpenAISettings _settings;
@@ -42,9 +42,9 @@ public class CategorizerAgent : AgentBase<Transaction, Transaction>
         - "Netflix Subscription" -> Entertainment
         """;
 
-    public CategorizerAgent(
+    public Categorizer(
         OpenAISettings settings,
-        ILogger<CategorizerAgent> logger,
+        ILogger<Categorizer> logger,
         int boundedCapacity = 100) 
         : base(logger, boundedCapacity)
     {

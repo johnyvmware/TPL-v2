@@ -9,20 +9,20 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Agents;
 
-public class CsvExporterAgent : IDisposable
+public class CsvExporter : IDisposable
 {
     private readonly ActionBlock<Transaction> _block;
     private readonly ConcurrentQueue<Transaction> _buffer;
     private readonly ExportSettings _settings;
-    private readonly ILogger<CsvExporterAgent> _logger;
+    private readonly ILogger<CsvExporter> _logger;
     private readonly Timer _flushTimer;
     private readonly SemaphoreSlim _exportSemaphore;
     private readonly string _outputDirectory;
     private int _totalExported;
 
-    public CsvExporterAgent(
+    public CsvExporter(
         ExportSettings settings,
-        ILogger<CsvExporterAgent> logger,
+        ILogger<CsvExporter> logger,
         int boundedCapacity = 100)
     {
         _settings = settings;

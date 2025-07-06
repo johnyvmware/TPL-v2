@@ -96,56 +96,56 @@ public class Program
         var pipelineSettings = configuration.GetSection("Pipeline").Get<PipelineSettings>() ?? new PipelineSettings();
 
         // HTTP Client
-        services.AddHttpClient<TransactionFetcherAgent>();
+        services.AddHttpClient<TransactionFetcher>();
 
-        // Agents
-        services.AddTransient<TransactionFetcherAgent>(provider =>
+        // Components
+        services.AddTransient<TransactionFetcher>(provider =>
         {
             var httpClient = provider.GetRequiredService<HttpClient>();
-            var logger = provider.GetRequiredService<ILogger<TransactionFetcherAgent>>();
-            return new TransactionFetcherAgent(httpClient, transactionApiSettings, logger, pipelineSettings.BoundedCapacity);
+            var logger = provider.GetRequiredService<ILogger<TransactionFetcher>>();
+            return new TransactionFetcher(httpClient, transactionApiSettings, logger, pipelineSettings.BoundedCapacity);
         });
 
-        services.AddTransient<TransactionProcessorAgent>(provider =>
+        services.AddTransient<TransactionProcessor>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<TransactionProcessorAgent>>();
-            return new TransactionProcessorAgent(logger, pipelineSettings.BoundedCapacity);
+            var logger = provider.GetRequiredService<ILogger<TransactionProcessor>>();
+            return new TransactionProcessor(logger, pipelineSettings.BoundedCapacity);
         });
 
-        services.AddTransient<EmailEnricherAgent>(provider =>
+        services.AddTransient<EmailEnricher>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<EmailEnricherAgent>>();
-            return new EmailEnricherAgent(graphSettings, logger, pipelineSettings.BoundedCapacity);
+            var logger = provider.GetRequiredService<ILogger<EmailEnricher>>();
+            return new EmailEnricher(graphSettings, logger, pipelineSettings.BoundedCapacity);
         });
 
-        services.AddTransient<CategorizerAgent>(provider =>
+        services.AddTransient<Categorizer>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<CategorizerAgent>>();
-            return new CategorizerAgent(openAISettings, logger, pipelineSettings.BoundedCapacity);
+            var logger = provider.GetRequiredService<ILogger<Categorizer>>();
+            return new Categorizer(openAISettings, logger, pipelineSettings.BoundedCapacity);
         });
 
-        services.AddTransient<CsvExporterAgent>(provider =>
+        services.AddTransient<CsvExporter>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<CsvExporterAgent>>();
-            return new CsvExporterAgent(exportSettings, logger, pipelineSettings.BoundedCapacity);
+            var logger = provider.GetRequiredService<ILogger<CsvExporter>>();
+            return new CsvExporter(exportSettings, logger, pipelineSettings.BoundedCapacity);
         });
 
         // Pipeline
         services.AddTransient<TransactionPipeline>(provider =>
         {
-            var fetcherAgent = provider.GetRequiredService<TransactionFetcherAgent>();
-            var processorAgent = provider.GetRequiredService<TransactionProcessorAgent>();
-            var enricherAgent = provider.GetRequiredService<EmailEnricherAgent>();
-            var categorizerAgent = provider.GetRequiredService<CategorizerAgent>();
-            var exporterAgent = provider.GetRequiredService<CsvExporterAgent>();
+            var fetcher = provider.GetRequiredService<TransactionFetcher>();
+            var processor = provider.GetRequiredService<TransactionProcessor>();
+            var enricher = provider.GetRequiredService<EmailEnricher>();
+            var categorizer = provider.GetRequiredService<Categorizer>();
+            var exporter = provider.GetRequiredService<CsvExporter>();
             var logger = provider.GetRequiredService<ILogger<TransactionPipeline>>();
             
             return new TransactionPipeline(
-                fetcherAgent,
-                processorAgent,
-                enricherAgent,
-                categorizerAgent,
-                exporterAgent,
+                fetcher,
+                processor,
+                enricher,
+                categorizer,
+                exporter,
                 pipelineSettings,
                 logger);
         });

@@ -1,32 +1,32 @@
-# Agent-Based TPL Dataflow Transaction Processing System
+# TPL Dataflow Transaction Processing System
 
 ## Overview
 
-A production-grade financial transaction processing pipeline built with C# and TPL Dataflow architecture. The system processes transactions through a 5-stage agent pipeline, enriching data with email context using Microsoft Graph and categorizing transactions with OpenAI's ChatGPT.
+A production-grade financial transaction processing pipeline built with C# and TPL Dataflow architecture. The system processes transactions through a 5-stage processing pipeline, enriching data with email context using Microsoft Graph and categorizing transactions with OpenAI's ChatGPT.
 
 ## System Architecture
 
 ### Pipeline Flow
 ```
-TransactionFetcherAgent → TransactionProcessorAgent → EmailEnricherAgent → CategorizerAgent → CsvExporterAgent
+TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer → CsvExporter
 ```
 
-Each agent operates as an independent processing unit with:
+Each component operates as an independent processing unit with:
 - **Bounded Capacity**: Memory-safe processing with configurable limits
 - **Async Processing**: Full async/await with cancellation support
-- **Error Isolation**: Individual agent failures don't cascade
-- **Monitoring**: Structured logging throughout all operations
+  - **Error Isolation**: Individual component failures don't cascade
+  - **Monitoring**: Structured logging throughout all operations
 
 ## Core Components
 
-### 1. TransactionFetcherAgent
+### 1. TransactionFetcher
 Fetches transaction data from REST APIs with enterprise-grade reliability:
 - HTTP retry logic with exponential backoff
 - Configurable timeout handling (30s default)
 - JSON deserialization with validation
 - Data type conversion with fallback values
 
-### 2. TransactionProcessorAgent
+### 2. TransactionProcessor
 Cleans and normalizes transaction data:
 - Advanced regex-based text processing
 - Intelligent abbreviation handling (ATM, LLC, INC, etc.)
@@ -34,7 +34,7 @@ Cleans and normalizes transaction data:
 - Date/time normalization
 - Amount formatting with precision control
 
-### 3. EmailEnricherAgent
+### 3. EmailEnricher
 Enriches transactions with related email data using Microsoft Graph:
 - **Authentication**: Azure Identity with client credentials
 - **Email Search**: Date-range filtering (±2 days configurable)
@@ -44,14 +44,14 @@ Enriches transactions with related email data using Microsoft Graph:
   - Temporal proximity to transaction date
   - Financial content detection
 
-### 4. CategorizerAgent
+### 4. Categorizer
 Categorizes transactions using OpenAI's ChatGPT:
 - **AI Integration**: Real ChatGPT API with prompt engineering
 - **Categories**: Food & Dining, Transportation, Shopping, Utilities, Entertainment, Healthcare, Education, Travel, Financial Services, Business Services, Other
 - **Fallback Logic**: Rule-based categorization when AI fails
 - **Validation**: Response validation with category normalization
 
-### 5. CsvExporterAgent
+### 5. CsvExporter
 Exports processed transactions to CSV files:
 - **Thread-Safe**: Concurrent processing with semaphore protection
 - **Buffering**: Configurable buffer size with automatic flush
@@ -146,7 +146,7 @@ txn_123,2024-01-15,45.67,STARBUCKS STORE #1234 SEATTLE WA,Starbucks Store Seattl
 - **Timeout Handling**: Configurable per-operation timeouts
 
 ### Performance Characteristics
-- **Configurable Parallelism**: 1-16 concurrent workers per agent
+- **Configurable Parallelism**: 1-16 concurrent workers per component
 - **Bounded Capacity**: 100-item queues prevent memory bloat
 - **Streaming Processing**: Memory-efficient for large datasets
 - **Connection Pooling**: HTTP client reuse with dependency injection
@@ -182,7 +182,7 @@ The system generates timestamped CSV files in the configured output directory:
 ## Error Handling
 
 The system implements comprehensive error handling:
-- **Agent-Level**: Individual agent failures don't stop the pipeline
+- **Component-Level**: Individual component failures don't stop the pipeline
 - **Retry Logic**: Automatic retry with exponential backoff
 - **Fallback Processing**: Continue processing when external services fail
 - **Data Validation**: Input validation with detailed error messages

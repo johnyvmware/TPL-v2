@@ -5,13 +5,13 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Agents;
 
-public class TransactionProcessorAgent : AgentBase<Transaction, Transaction>
+public class TransactionProcessor : AgentBase<Transaction, Transaction>
 {
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex SpecialCharsRegex = new(@"[^\w\s\-\.\,\$\&\@\#\%\(\)]", RegexOptions.Compiled);
 
-    public TransactionProcessorAgent(
-        ILogger<TransactionProcessorAgent> logger,
+    public TransactionProcessor(
+        ILogger<TransactionProcessor> logger,
         int boundedCapacity = 100) 
         : base(logger, boundedCapacity)
     {

@@ -16,7 +16,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
     public EmailEnricher(
         MicrosoftGraphSettings settings,
         ILogger<EmailEnricher> logger,
-        int boundedCapacity = 100) 
+        int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {
         _settings = settings;
@@ -41,7 +41,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
 
             if (matchedEmail != null)
             {
-                _logger.LogDebug("Enriched transaction {Id} with email: {Subject}", 
+                _logger.LogDebug("Enriched transaction {Id} with email: {Subject}",
                     transaction.Id, matchedEmail.Subject);
             }
             else
@@ -105,7 +105,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
                 })
                 .ToList() ?? new List<EmailMatch>();
 
-            _logger.LogDebug("Found {Count} emails in date range for transaction {Id}", 
+            _logger.LogDebug("Found {Count} emails in date range for transaction {Id}",
                 emailMatches.Count, transaction.Id);
 
             return emailMatches;
@@ -159,7 +159,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         // Check for description keyword matches
         var transactionKeywords = ExtractKeywords(transaction.CleanDescription ?? transaction.Description);
         var emailKeywords = ExtractKeywords(emailText);
-        
+
         var commonKeywords = transactionKeywords.Intersect(emailKeywords, StringComparer.OrdinalIgnoreCase);
         score += commonKeywords.Count() * 5;
 

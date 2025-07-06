@@ -29,7 +29,7 @@ public class Program
             });
 
         using var host = builder.Build();
-        
+
         var logger = host.Services.GetRequiredService<ILogger<Program>>();
         logger.LogInformation("Starting Transaction Processing System");
 
@@ -79,19 +79,19 @@ public class Program
 
         // Bind configuration objects
         var openAISettings = configuration.GetSection("OpenAI").Get<OpenAISettings>() ?? new OpenAISettings { ApiKey = "test-key" };
-        var graphSettings = configuration.GetSection("MicrosoftGraph").Get<MicrosoftGraphSettings>() ?? new MicrosoftGraphSettings 
-        { 
-            ClientId = "test-client-id", 
-            ClientSecret = "test-client-secret", 
-            TenantId = "test-tenant-id" 
+        var graphSettings = configuration.GetSection("MicrosoftGraph").Get<MicrosoftGraphSettings>() ?? new MicrosoftGraphSettings
+        {
+            ClientId = "test-client-id",
+            ClientSecret = "test-client-secret",
+            TenantId = "test-tenant-id"
         };
-        var transactionApiSettings = configuration.GetSection("TransactionApi").Get<TransactionApiSettings>() ?? new TransactionApiSettings 
-        { 
-            BaseUrl = "http://localhost:5000" 
+        var transactionApiSettings = configuration.GetSection("TransactionApi").Get<TransactionApiSettings>() ?? new TransactionApiSettings
+        {
+            BaseUrl = "http://localhost:5000"
         };
-        var exportSettings = configuration.GetSection("Export").Get<ExportSettings>() ?? new ExportSettings 
-        { 
-            OutputDirectory = "./output" 
+        var exportSettings = configuration.GetSection("Export").Get<ExportSettings>() ?? new ExportSettings
+        {
+            OutputDirectory = "./output"
         };
         var pipelineSettings = configuration.GetSection("Pipeline").Get<PipelineSettings>() ?? new PipelineSettings();
 
@@ -139,7 +139,7 @@ public class Program
             var categorizer = provider.GetRequiredService<Categorizer>();
             var exporter = provider.GetRequiredService<CsvExporter>();
             var logger = provider.GetRequiredService<ILogger<TransactionPipeline>>();
-            
+
             return new TransactionPipeline(
                 fetcher,
                 processor,
@@ -157,7 +157,7 @@ public class Program
             return new MockTransactionApiService(logger, transactionApiSettings.BaseUrl);
         });
 
-        services.AddHostedService<MockTransactionApiService>(provider => 
+        services.AddHostedService<MockTransactionApiService>(provider =>
             provider.GetRequiredService<MockTransactionApiService>());
     }
 }

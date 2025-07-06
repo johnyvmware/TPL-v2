@@ -44,7 +44,7 @@ public class CsvExporter : IDisposable
         _block = new ActionBlock<Transaction>(ProcessTransaction, options);
 
         // Set up periodic flush every 30 seconds
-        _flushTimer = new Timer(async _ => await FlushBuffer(), null, 
+        _flushTimer = new Timer(async _ => await FlushBuffer(), null,
             TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
     }
 
@@ -87,7 +87,7 @@ public class CsvExporter : IDisposable
             {
                 await ExportTransactions(transactions);
                 _totalExported += transactions.Count;
-                _logger.LogInformation("Exported {Count} transactions (Total: {Total})", 
+                _logger.LogInformation("Exported {Count} transactions (Total: {Total})",
                     transactions.Count, _totalExported);
             }
         }
@@ -116,7 +116,7 @@ public class CsvExporter : IDisposable
         {
             using var writer = new StringWriter();
             using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-            
+
             // Write header
             csv.WriteField("Date");
             csv.WriteField("Amount");
@@ -140,8 +140,8 @@ public class CsvExporter : IDisposable
 
             var csvContent = writer.ToString();
             await File.WriteAllTextAsync(filePath, csvContent, Encoding.UTF8);
-            
-            _logger.LogInformation("Successfully exported {Count} transactions to {FilePath}", 
+
+            _logger.LogInformation("Successfully exported {Count} transactions to {FilePath}",
                 transactions.Count, filePath);
         }
         catch (Exception ex)
@@ -161,7 +161,7 @@ public class CsvExporter : IDisposable
     {
         _flushTimer?.Dispose();
         _exportSemaphore?.Dispose();
-        
+
         // Ensure final flush on disposal
         try
         {

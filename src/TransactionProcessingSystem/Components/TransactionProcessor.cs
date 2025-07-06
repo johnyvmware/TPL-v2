@@ -12,14 +12,14 @@ public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
 
     public TransactionProcessor(
         ILogger<TransactionProcessor> logger,
-        int boundedCapacity = 100) 
+        int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {
     }
 
     protected override async Task<Transaction> ProcessAsync(Transaction transaction)
     {
-        _logger.LogDebug("Processing transaction {Id}: {Description}", 
+        _logger.LogDebug("Processing transaction {Id}: {Description}",
             transaction.Id, transaction.Description);
 
         try
@@ -36,7 +36,7 @@ public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
                 Status = ProcessingStatus.Processed
             };
 
-            _logger.LogDebug("Processed transaction {Id}: '{Original}' -> '{Clean}'", 
+            _logger.LogDebug("Processed transaction {Id}: '{Original}' -> '{Clean}'",
                 transaction.Id, transaction.Description, cleanDescription);
 
             await Task.CompletedTask; // Ensure async compliance
@@ -79,17 +79,17 @@ public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
 
         var textInfo = CultureInfo.CurrentCulture.TextInfo;
         var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        
+
         var titleCased = words.Select(word =>
         {
             // Keep common abbreviations uppercase
             if (IsCommonAbbreviation(word))
                 return word.ToUpper();
-            
+
             // Handle mixed case words (like McDonald's)
             if (word.Length > 1 && word.Any(char.IsUpper) && word.Any(char.IsLower))
                 return word;
-            
+
             return textInfo.ToTitleCase(word.ToLower());
         });
 
@@ -104,15 +104,15 @@ public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
 
     private string RemoveRedundantTerms(string description)
     {
-        var redundantTerms = new[] 
-        { 
-            "PURCHASE", "PAYMENT", "DEBIT", "CREDIT", "TRANSACTION", 
+        var redundantTerms = new[]
+        {
+            "PURCHASE", "PAYMENT", "DEBIT", "CREDIT", "TRANSACTION",
             "AUTHORIZATION", "PENDING", "PROCESSING", "TEMP", "HOLD"
         };
 
         var words = description.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var filtered = words.Where(word => 
-            !redundantTerms.Contains(word.ToUpper()) || 
+        var filtered = words.Where(word =>
+            !redundantTerms.Contains(word.ToUpper()) ||
             words.Length <= 2); // Keep if it's one of the few words left
 
         return string.Join(" ", filtered);

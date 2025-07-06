@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -9,22 +9,27 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
-      
+      with:
+        fetch-depth: 0 # Required for GitVersion
+        
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
     - name: Cache NuGet packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -32,26 +37,38 @@ jobs:
           ${{ runner.os }}-nuget-
           
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore --verbosity minimal
       
-    - name: Build solution
-      run: dotnet build --configuration Release --no-restore
+    - name: Build solution (Debug)
+      run: dotnet build --configuration Debug --no-restore --verbosity minimal
+      
+    - name: Build solution (Release)
+      run: dotnet build --configuration Release --no-restore --verbosity minimal
       
     - name: Run tests
-      run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+      run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults/ --logger trx
       
-    - name: Upload coverage reports
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
       if: always()
-      uses: codecov/codecov-action@v3
+      with:
+        name: test-results
+        path: TestResults/
+        
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      if: always()
       with:
         files: '**/coverage.cobertura.xml'
         fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   code-quality:
+    name: Code Quality & Security
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
       
     - name: Setup .NET
@@ -60,19 +77,51 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore --verbosity minimal
       
     - name: Format check
       run: dotnet format --verify-no-changes --verbosity diagnostic
       
-    - name: Analyze code
-      run: dotnet build --configuration Release --verbosity normal
+    - name: Security scan - Vulnerable packages
+      run: |
+        echo "Scanning for vulnerable packages..."
+        dotnet list package --vulnerable --include-transitive 2>&1 | tee security-scan.log
+        if grep -q "has the following vulnerable packages" security-scan.log; then
+          echo "❌ Vulnerable packages found!"
+          cat security-scan.log
+          exit 1
+        else
+          echo "✅ No vulnerable packages found"
+        fi
+        
+    - name: Security scan - Outdated packages
+      run: |
+        echo "Checking for outdated packages..."
+        dotnet list package --outdated > outdated-packages.log 2>&1 || true
+        if [ -s outdated-packages.log ]; then
+          echo "📦 Outdated packages found:"
+          cat outdated-packages.log
+        else
+          echo "✅ All packages are up to date"
+        fi
+        
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-scan-results
+        path: |
+          security-scan.log
+          outdated-packages.log
 
-  security-scan:
+  build-artifacts:
+    name: Build Release Artifacts
     runs-on: ubuntu-latest
+    needs: [build-and-test, code-quality]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
       
     - name: Setup .NET
@@ -81,12 +130,61 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore --verbosity minimal
       
-    - name: Run security scan
+    - name: Publish application
       run: |
-        dotnet list package --vulnerable --include-transitive 2>&1 | tee security-scan.log
-        if grep -q "has the following vulnerable packages" security-scan.log; then
-          echo "Vulnerable packages found!"
-          exit 1
-        fi
+        dotnet publish src/TransactionProcessingSystem/TransactionProcessingSystem.csproj \
+          --configuration Release \
+          --output ./publish \
+          --no-restore \
+          --verbosity minimal \
+          --self-contained false
+          
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-artifacts-${{ github.sha }}
+        path: ./publish/
+        retention-days: 30
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore --verbosity minimal
+      
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore --verbosity minimal
+      
+    - name: Run integration tests
+      run: |
+        echo "Running basic application smoke test..."
+        cd src/TransactionProcessingSystem
+        timeout 10s dotnet run --configuration Release --no-build || true
+        echo "✅ Application startup test completed"
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: moderate

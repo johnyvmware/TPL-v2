@@ -45,13 +45,14 @@ Enriches transactions with related email data using Microsoft Graph:
   - Financial content detection
 
 ### 4. Categorizer
-Categorizes transactions using OpenAI's ChatGPT with structured JSON responses:
-- **AI Integration**: Real ChatGPT API with GPT-4-turbo model and JSON response formatting
-- **Structured Output**: Prompt-engineered JSON responses with category, confidence score, and reasoning
+Categorizes transactions using OpenAI's ChatGPT with enforced JSON Schema responses:
+- **AI Integration**: Official OpenAI .NET client with GPT-4o-mini model and strict JSON Schema enforcement
+- **JSON Schema Enforcement**: Uses `ChatResponseFormat.CreateJsonSchemaFormat()` for guaranteed response structure
+- **Structured Output**: Enforced JSON format with category, confidence score, and reasoning fields
 - **Categories**: Food & Dining, Transportation, Shopping, Utilities, Entertainment, Healthcare, Education, Travel, Financial Services, Business Services, Other
-- **Enhanced Accuracy**: Lower temperature (0.1) and structured prompts for precise categorization
+- **Enhanced Accuracy**: Lower temperature (0.1) and strict schema validation for precise categorization
 - **Fallback Logic**: Rule-based categorization when AI fails, with text extraction from malformed JSON
-- **Future-Ready**: Configurable for formal JSON Schema enforcement when SDK supports it
+- **Production Ready**: Full JSON Schema enforcement using the official OpenAI .NET SDK
 
 ### 5. CsvExporter
 Exports processed transactions to CSV files:
@@ -70,7 +71,7 @@ Configure the system through `appsettings.json`:
 {
   "OpenAI": {
     "ApiKey": "your-openai-api-key",
-    "Model": "gpt-4-turbo",
+    "Model": "gpt-4o-mini",
     "MaxTokens": 200,
     "Temperature": 0.1,
     "UseJsonSchema": true
@@ -169,10 +170,10 @@ txn_123,2024-01-15,45.67,STARBUCKS STORE #1234 SEATTLE WA,Starbucks Store Seattl
 - **Rate Limiting**: Respects Graph API throttling limits
 
 ### OpenAI ChatGPT
-- **Model**: GPT-4-turbo with structured JSON response formatting
-- **JSON Response Engineering**: Prompt-driven consistent response format with category, confidence, and reasoning
-- **Prompt Engineering**: Optimized system prompts with structured output requirements
-- **Response Validation**: Automatic JSON parsing with fallback text extraction
+- **Model**: GPT-4o-mini with official JSON Schema enforcement
+- **JSON Schema Enforcement**: Uses `ChatResponseFormat.CreateJsonSchemaFormat()` with strict validation
+- **Structured Responses**: Guaranteed JSON format with category, confidence, and reasoning fields
+- **Response Parsing**: JsonDocument parsing with property validation
 - **Token Management**: Configurable token limits (200 tokens default)
 - **Error Handling**: Multi-layer fallback including rule-based categorization
 

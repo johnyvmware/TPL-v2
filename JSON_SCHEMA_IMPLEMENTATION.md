@@ -1,8 +1,8 @@
-# JSON Schema Implementation for Transaction Categorization
+# Official OpenAI .NET Client JSON Schema Implementation
 
 ## Overview
 
-The Categorizer component has been enhanced with structured JSON response handling to improve consistency and parsing reliability of OpenAI ChatGPT responses. This implementation uses prompt engineering to enforce JSON output format and includes robust parsing with multiple fallback mechanisms.
+The Categorizer component has been completely rewritten to use the official OpenAI .NET client with **strict JSON Schema enforcement**. This implementation uses `ChatResponseFormat.CreateJsonSchemaFormat()` to guarantee structured responses and includes robust parsing with multiple fallback mechanisms.
 
 ## Implementation Details
 
@@ -39,28 +39,87 @@ The system prompt has been redesigned to:
 ## Technical Implementation
 
 ### Model Selection
-- **Primary Model**: GPT-4-turbo (configurable)
+- **Primary Model**: GPT-4o-mini (JSON Schema support required)
 - **Temperature**: 0.1 for consistent, precise responses
-- **Token Limit**: 200 tokens for structured responses
+- **SDK**: Official OpenAI .NET client v2.0.0
 
-### Response Processing Pipeline
+### Official OpenAI Client Implementation
 
-#### 1. JSON Response Parsing
+#### 1. Client Initialization
 ```csharp
-public record CategoryResponse
+private readonly OpenAIClient _openAIClient;
+
+public Categorizer(OpenAISettings settings, ...)
 {
-    public required string Category { get; init; }
-    public required double Confidence { get; init; }
-    public required string Reasoning { get; init; }
+    _openAIClient = new OpenAIClient(_settings.ApiKey);
 }
 ```
 
-#### 2. Multi-Layer Fallback System
-1. **Primary**: JSON deserialization with JsonSerializer
+#### 2. JSON Schema Definition
+```csharp
+private static readonly string CategoryJsonSchema = """
+{
+    "type": "object",
+    "properties": {
+        "category": {
+            "type": "string",
+            "enum": ["Food & Dining", "Transportation", ...]
+        },
+        "confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+        },
+        "reasoning": {
+            "type": "string",
+            "maxLength": 200
+        }
+    },
+    "required": ["category", "confidence", "reasoning"],
+    "additionalProperties": false
+}
+""";
+```
+
+#### 3. Structured Response Enforcement
+```csharp
+var options = new ChatCompletionOptions
+{
+    Temperature = (float)_settings.Temperature,
+    ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+        jsonSchemaFormatName: "transaction_categorization",
+        jsonSchema: BinaryData.FromString(CategoryJsonSchema),
+        jsonSchemaIsStrict: true)
+};
+
+var completion = await _openAIClient
+    .GetChatClient(model)
+    .CompleteChatAsync(messages, options);
+```
+
+#### 4. Response Processing Pipeline
+1. **Primary**: JsonDocument parsing with property validation
 2. **Secondary**: Text extraction from malformed JSON
 3. **Tertiary**: Rule-based categorization using keyword matching
 
-#### 3. Category Validation
+#### 5. JsonDocument Response Parsing
+```csharp
+private string ParseStructuredJsonResponse(string transactionId, string jsonContent)
+{
+    using JsonDocument structuredJson = JsonDocument.Parse(jsonContent);
+    
+    var category = structuredJson.RootElement.GetProperty("category").GetString();
+    var confidence = structuredJson.RootElement.GetProperty("confidence").GetDouble();
+    var reasoning = structuredJson.RootElement.GetProperty("reasoning").GetString();
+
+    _logger.LogDebug("OpenAI categorization for transaction {Id}: {Category} (confidence: {Confidence:P1}, reasoning: {Reasoning})", 
+        transactionId, category, confidence, reasoning);
+
+    return ValidateCategory(category);
+}
+```
+
+#### 6. Category Validation
 - Validates against predefined category list
 - Supports exact and partial matching
 - Defaults to "Other" for invalid categories
@@ -79,25 +138,25 @@ public record CategoryResponse
 
 ## Benefits
 
-### 1. Improved Consistency
-- Structured responses reduce parsing ambiguity
-- Confidence scores enable quality assessment
-- Reasoning provides transparency for categorization decisions
+### 1. Guaranteed Response Structure
+- **Strict JSON Schema**: `jsonSchemaIsStrict: true` enforces exact format compliance
+- **Type Safety**: Properties are guaranteed to exist and have correct types
+- **Validation**: Schema validation happens at the OpenAI API level
 
-### 2. Enhanced Debugging
-- Detailed logging of AI reasoning process
-- Confidence scores help identify uncertain categorizations
-- Structured format enables easy analysis
+### 2. Enhanced Reliability
+- **Official SDK**: Uses OpenAI's maintained and supported .NET client
+- **Error Reduction**: Malformed responses are virtually eliminated
+- **Consistent Parsing**: JsonDocument provides robust property access
 
-### 3. Production Reliability
-- Multiple fallback layers prevent processing failures
-- Graceful degradation when AI services are unavailable
-- Configurable behavior based on operational needs
+### 3. Production-Grade Quality
+- **Real-time Validation**: Schema violations are caught immediately
+- **Transparency**: Confidence scores and reasoning for every decision
+- **Comprehensive Logging**: Full categorization context for debugging
 
-### 4. Future-Proofing
-- Ready for formal JSON Schema enforcement when SDK supports it
-- Extensible structure for additional response fields
-- Model-agnostic implementation
+### 4. Performance Benefits
+- **Reduced Retries**: Schema enforcement minimizes parsing failures
+- **Efficient Processing**: JsonDocument parsing is optimized
+- **Minimal Fallbacks**: Structured responses reduce fallback usage
 
 ## Configuration Options
 
@@ -108,10 +167,12 @@ public record CategoryResponse
 - `MaxTokens`: Limit response length (200 recommended)
 
 ### Model Compatibility
-The system automatically detects JSON-capable models:
-- GPT-4 series (recommended)
-- GPT-4-turbo (optimal performance)
-- GPT-3.5-turbo (fallback option)
+JSON Schema enforcement requires specific OpenAI models:
+- **GPT-4o-mini** (primary choice - cost-effective with schema support)
+- **GPT-4o** (enhanced capabilities)
+- **GPT-4-turbo** (if available)
+
+**Note**: Older models like GPT-3.5-turbo do not support structured output with JSON Schema.
 
 ## Example Responses
 

@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
 using OpenAI;
-using OpenAI.Managers;
-using OpenAI.ObjectModels.RequestModels;
-using OpenAI.ObjectModels;
+using OpenAI.Chat;
 using System.Text.Json;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
@@ -11,7 +9,7 @@ namespace TransactionProcessingSystem.Agents;
 
 public class Categorizer : AgentBase<Transaction, Transaction>
 {
-    private readonly OpenAIService _openAIService;
+    private readonly OpenAIClient _openAIClient;
     private readonly OpenAISettings _settings;
     
     private static readonly string SystemPrompt = """
@@ -41,47 +39,43 @@ public class Categorizer : AgentBase<Transaction, Transaction>
         You must respond with valid JSON matching the required schema.
         """;
 
-    private static readonly object CategorySchema = new
-    {
-        type = "object",
-        properties = new
+    private static readonly string CategoryJsonSchema = """
         {
-            category = new
-            {
-                type = "string",
-                @enum = new[]
-                {
-                    "Food & Dining",
-                    "Transportation", 
-                    "Shopping",
-                    "Utilities",
-                    "Entertainment",
-                    "Healthcare",
-                    "Education",
-                    "Travel",
-                    "Financial Services",
-                    "Business Services",
-                    "Other"
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "Food & Dining",
+                        "Transportation", 
+                        "Shopping",
+                        "Utilities",
+                        "Entertainment",
+                        "Healthcare",
+                        "Education",
+                        "Travel",
+                        "Financial Services",
+                        "Business Services",
+                        "Other"
+                    ],
+                    "description": "The most appropriate category for this transaction"
                 },
-                description = "The most appropriate category for this transaction"
+                "confidence": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "description": "Confidence score for the categorization (0.0 to 1.0)"
+                },
+                "reasoning": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Brief explanation for the categorization choice"
+                }
             },
-            confidence = new
-            {
-                type = "number",
-                minimum = 0.0,
-                maximum = 1.0,
-                description = "Confidence score for the categorization (0.0 to 1.0)"
-            },
-            reasoning = new
-            {
-                type = "string",
-                maxLength = 200,
-                description = "Brief explanation for the categorization choice"
-            }
-        },
-        required = new[] { "category", "confidence", "reasoning" },
-        additionalProperties = false
-    };
+            "required": ["category", "confidence", "reasoning"],
+            "additionalProperties": false
+        }
+        """;
 
     public Categorizer(
         OpenAISettings settings,
@@ -90,10 +84,7 @@ public class Categorizer : AgentBase<Transaction, Transaction>
         : base(logger, boundedCapacity)
     {
         _settings = settings;
-        _openAIService = new OpenAIService(new OpenAiOptions()
-        {
-            ApiKey = _settings.ApiKey
-        });
+        _openAIClient = new OpenAIClient(_settings.ApiKey);
     }
 
     protected override async Task<Transaction> ProcessAsync(Transaction transaction)
@@ -134,35 +125,40 @@ public class Categorizer : AgentBase<Transaction, Transaction>
     {
         var userMessage = BuildUserMessage(transaction);
         
-        var chatRequest = new ChatCompletionCreateRequest
+        List<ChatMessage> messages = [
+            new SystemChatMessage(SystemPrompt),
+            new UserChatMessage(userMessage)
+        ];
+
+        var options = new ChatCompletionOptions
         {
-            Model = !string.IsNullOrEmpty(_settings.Model) ? _settings.Model : "gpt-4-turbo",
-            Messages = new List<ChatMessage>
-            {
-                ChatMessage.FromSystem(SystemPrompt),
-                ChatMessage.FromUser(userMessage)
-            },
-            MaxTokens = _settings.MaxTokens,
             Temperature = (float)_settings.Temperature
         };
 
-        // Note: JSON Schema enforcement will be implemented when SDK supports it
-        // For now, we rely on prompt engineering to get JSON responses
-
-        var response = await _openAIService.ChatCompletion.CreateCompletion(chatRequest);
-        
-        if (response?.Successful != true || response.Choices?.FirstOrDefault()?.Message?.Content == null)
+        // Use JSON Schema enforcement if enabled
+        if (_settings.UseJsonSchema)
         {
-            _logger.LogWarning("Invalid response from OpenAI for transaction {Id}", transaction.Id);
-            throw new InvalidOperationException($"OpenAI API returned invalid response: {response?.Error?.Message}");
+            options.ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+                jsonSchemaFormatName: "transaction_categorization",
+                jsonSchema: BinaryData.FromString(CategoryJsonSchema),
+                jsonSchemaIsStrict: true);
         }
 
-        var content = response.Choices.First().Message.Content!.Trim();
+        var model = !string.IsNullOrEmpty(_settings.Model) ? _settings.Model : "gpt-4o-mini";
+        var completion = await _openAIClient.GetChatClient(model).CompleteChatAsync(messages, options);
+        
+        if (completion?.Value?.Content == null || completion.Value.Content.Count == 0)
+        {
+            _logger.LogWarning("Invalid response from OpenAI for transaction {Id}", transaction.Id);
+            throw new InvalidOperationException("OpenAI API returned empty response");
+        }
+
+        var content = completion.Value.Content[0].Text;
         
         // Parse response based on whether we're using JSON schema
         if (_settings.UseJsonSchema)
         {
-            return ParseJsonResponse(transaction.Id, content);
+            return ParseStructuredJsonResponse(transaction.Id, content);
         }
         else
         {
@@ -186,31 +182,39 @@ public class Categorizer : AgentBase<Transaction, Transaction>
             model.StartsWith(supportedModel, StringComparison.OrdinalIgnoreCase));
     }
 
-    private string ParseJsonResponse(string transactionId, string jsonContent)
+    private string ParseStructuredJsonResponse(string transactionId, string jsonContent)
     {
         try
         {
-            var categoryResponse = JsonSerializer.Deserialize<CategoryResponse>(jsonContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            using JsonDocument structuredJson = JsonDocument.Parse(jsonContent);
+            
+            var category = structuredJson.RootElement.GetProperty("category").GetString();
+            var confidence = structuredJson.RootElement.GetProperty("confidence").GetDouble();
+            var reasoning = structuredJson.RootElement.GetProperty("reasoning").GetString();
 
-            if (categoryResponse == null)
+            if (string.IsNullOrEmpty(category))
             {
-                throw new InvalidOperationException("Failed to deserialize category response");
+                throw new InvalidOperationException("Category field is missing or empty in JSON response");
             }
 
             _logger.LogDebug("OpenAI categorization for transaction {Id}: {Category} (confidence: {Confidence:P1}, reasoning: {Reasoning})", 
-                transactionId, categoryResponse.Category, categoryResponse.Confidence, categoryResponse.Reasoning);
+                transactionId, category, confidence, reasoning);
 
-            return ValidateCategory(categoryResponse.Category);
+            return ValidateCategory(category);
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse JSON response from OpenAI for transaction {Id}. Response: {Response}", 
+            _logger.LogWarning(ex, "Failed to parse structured JSON response from OpenAI for transaction {Id}. Response: {Response}", 
                 transactionId, jsonContent);
             
             // Try to extract category from malformed JSON as fallback
+            return ExtractCategoryFromText(jsonContent);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Required property missing in JSON response for transaction {Id}. Response: {Response}", 
+                transactionId, jsonContent);
+            
             return ExtractCategoryFromText(jsonContent);
         }
     }
@@ -328,11 +332,4 @@ public class Categorizer : AgentBase<Transaction, Transaction>
         _logger.LogWarning("Could not extract valid category from response: {Text}", text);
         return "Other";
     }
-}
-
-public record CategoryResponse
-{
-    public required string Category { get; init; }
-    public required double Confidence { get; init; }
-    public required string Reasoning { get; init; }
 }

@@ -2,10 +2,14 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  packages: write
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -18,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Required for GitVersion
+        fetch-depth: 0
         
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -39,21 +43,22 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore --verbosity minimal
       
-    - name: Build solution (Debug)
-      run: dotnet build --configuration Debug --no-restore --verbosity minimal
-      
-    - name: Build solution (Release)
+    - name: Build solution
       run: dotnet build --configuration Release --no-restore --verbosity minimal
       
     - name: Run tests
-      run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults/ --logger trx
+      run: |
+        dotnet test --configuration Release --no-build --verbosity normal \
+          --collect:"XPlat Code Coverage" --results-directory TestResults/ \
+          --logger trx --settings coverlet.runsettings
       
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results
+        name: test-results-${{ github.run_number }}
         path: TestResults/
+        retention-days: 7
         
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
@@ -63,12 +68,12 @@ jobs:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  code-quality:
-    name: Code Quality & Security
+  security-scan:
+    name: Security Scan
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
       
     - name: Setup .NET
@@ -79,49 +84,39 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore --verbosity minimal
       
-    - name: Format check
-      run: dotnet format --verify-no-changes --verbosity diagnostic
-      
-    - name: Security scan - Vulnerable packages
+    - name: Security scan - Vulnerabilities
       run: |
-        echo "Scanning for vulnerable packages..."
+        echo "🔍 Scanning for vulnerabilities..."
         dotnet list package --vulnerable --include-transitive 2>&1 | tee security-scan.log
         if grep -q "has the following vulnerable packages" security-scan.log; then
           echo "❌ Vulnerable packages found!"
           cat security-scan.log
           exit 1
-        else
-          echo "✅ No vulnerable packages found"
         fi
+        echo "✅ No vulnerabilities found"
         
-    - name: Security scan - Outdated packages
-      run: |
-        echo "Checking for outdated packages..."
-        dotnet list package --outdated > outdated-packages.log 2>&1 || true
-        if [ -s outdated-packages.log ]; then
-          echo "📦 Outdated packages found:"
-          cat outdated-packages.log
-        else
-          echo "✅ All packages are up to date"
-        fi
+    - name: Check for secrets
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
         
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: security-scan-results
-        path: |
-          security-scan.log
-          outdated-packages.log
+        name: security-scan-${{ github.run_number }}
+        path: security-scan.log
+        retention-days: 30
 
   build-artifacts:
-    name: Build Release Artifacts
+    name: Build Artifacts
     runs-on: ubuntu-latest
-    needs: [build-and-test, code-quality]
+    needs: [build-and-test, security-scan]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     steps:
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
       
     - name: Setup .NET
@@ -141,50 +136,9 @@ jobs:
           --verbosity minimal \
           --self-contained false
           
-    - name: Upload build artifacts
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: release-artifacts-${{ github.sha }}
+        name: release-artifacts-${{ github.run_number }}
         path: ./publish/
         retention-days: 30
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Restore dependencies
-      run: dotnet restore --verbosity minimal
-      
-    - name: Build solution
-      run: dotnet build --configuration Release --no-restore --verbosity minimal
-      
-    - name: Run integration tests
-      run: |
-        echo "Running basic application smoke test..."
-        cd src/TransactionProcessingSystem
-        timeout 10s dotnet run --configuration Release --no-build || true
-        echo "✅ Application startup test completed"
-
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
-      with:
-        fail-on-severity: moderate

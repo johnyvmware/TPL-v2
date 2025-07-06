@@ -3,7 +3,14 @@ name: PR Validation
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [ main, develop ]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+  statuses: write
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -11,13 +18,13 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  validate-pr:
-    name: Validate Pull Request
+  validate:
+    name: Build, Test & Security
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -39,196 +46,115 @@ jobs:
       run: dotnet restore --verbosity minimal
       
     - name: Build solution
-      run: dotnet build --configuration Debug --no-restore --verbosity minimal
+      run: dotnet build --configuration Release --no-restore --verbosity minimal
       
-    - name: Run unit tests
-      run: dotnet test --configuration Debug --no-build --verbosity normal --logger trx --results-directory test-results --collect:"XPlat Code Coverage"
+    - name: Run tests
+      run: |
+        dotnet test --configuration Release --no-build --verbosity normal \
+          --logger trx --results-directory TestResults \
+          --collect:"XPlat Code Coverage" \
+          --settings coverlet.runsettings
       
     - name: Publish test results
       uses: dorny/test-reporter@v1
       if: success() || failure()
       with:
-        name: .NET Test Results
-        path: test-results/*.trx
+        name: Test Results
+        path: TestResults/*.trx
         reporter: dotnet-trx
+        fail-on-error: true
         
-    - name: Code quality check
-      run: dotnet format --verify-no-changes --verbosity diagnostic
-      
+    - name: Code coverage
+      uses: codecov/codecov-action@v4
+      if: always()
+      with:
+        files: '**/coverage.cobertura.xml'
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+        
     - name: Security scan
       run: |
-        echo "🔍 Scanning for security vulnerabilities..."
+        echo "🔍 Scanning for vulnerabilities..."
         dotnet list package --vulnerable --include-transitive 2>&1 | tee security-scan.log
         if grep -q "has the following vulnerable packages" security-scan.log; then
           echo "❌ Security vulnerabilities found!"
           cat security-scan.log
           exit 1
-        else
-          echo "✅ No security vulnerabilities found"
         fi
+        echo "✅ No security vulnerabilities found"
         
-    - name: Check for breaking changes
+    - name: Code formatting
       run: |
-        echo "🔍 Checking for potential breaking changes..."
-        # Check if public API classes have been modified
-        git diff HEAD~1 --name-only | grep -E '\.(cs)$' | head -10 || true
-        echo "ℹ️ Review the changed C# files above for potential breaking changes"
+        dotnet format --verify-no-changes --verbosity diagnostic
         
-    - name: Validate project structure
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: test-results-${{ github.event.number }}
+        path: |
+          TestResults/
+          security-scan.log
+        retention-days: 3
+
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Validate solution structure
       run: |
         echo "📁 Validating project structure..."
-        
-        # Check required files exist
         required_files=(
-          "README.md"
           "TransactionProcessingSystem.sln"
           "src/TransactionProcessingSystem/TransactionProcessingSystem.csproj"
           "tests/TransactionProcessingSystem.Tests/TransactionProcessingSystem.Tests.csproj"
-          ".github/workflows/ci.yml"
-          ".github/dependabot.yml"
         )
         
         for file in "${required_files[@]}"; do
           if [ ! -f "$file" ]; then
             echo "❌ Required file missing: $file"
             exit 1
-          else
-            echo "✅ Found: $file"
           fi
         done
-        
-    - name: Check solution file integrity
-      run: |
-        echo "🔧 Validating solution file..."
-        dotnet sln list > solution-projects.log
-        echo "Projects in solution:"
-        cat solution-projects.log
-        
-        # Verify both main project and test project are included
-        if ! grep -q "TransactionProcessingSystem.csproj" solution-projects.log; then
-          echo "❌ Main project not found in solution"
-          exit 1
-        fi
-        
-        if ! grep -q "TransactionProcessingSystem.Tests.csproj" solution-projects.log; then
-          echo "❌ Test project not found in solution"
-          exit 1
-        fi
-        
-        echo "✅ Solution file validation passed"
-        
-    - name: Check code documentation
-      run: |
-        echo "📚 Checking code documentation..."
-        # Count public classes without XML documentation
-        undocumented=$(find src/ -name "*.cs" -exec grep -L "///" {} \; | wc -l)
-        total_cs_files=$(find src/ -name "*.cs" | wc -l)
-        
-        echo "📊 Documentation coverage: $((total_cs_files - undocumented))/$total_cs_files files have documentation"
-        
-        if [ $undocumented -gt $((total_cs_files / 2)) ]; then
-          echo "⚠️ Consider adding more XML documentation comments to public APIs"
-        else
-          echo "✅ Good documentation coverage"
-        fi
-        
-    - name: Performance check
-      run: |
-        echo "⚡ Running performance checks..."
-        cd src/TransactionProcessingSystem
-        
-        # Quick startup time test
-        echo "Testing application startup time..."
-        start_time=$(date +%s%N)
-        timeout 10s dotnet run --configuration Release --no-build > /dev/null 2>&1 || true
-        end_time=$(date +%s%N)
-        startup_ms=$(( (end_time - start_time) / 1000000 ))
-        
-        echo "📈 Application startup took: ${startup_ms}ms"
-        
-        if [ $startup_ms -gt 10000 ]; then
-          echo "⚠️ Startup time is over 10 seconds, consider optimization"
-        else
-          echo "✅ Acceptable startup performance"
-        fi
-        
-    - name: Upload PR validation artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: pr-validation-${{ github.event.number }}
-        path: |
-          test-results/
-          security-scan.log
-          solution-projects.log
-        retention-days: 7
-
-  lint-and-format:
-    name: Linting & Formatting
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Install dotnet format
-      run: dotnet tool install -g dotnet-format || true
-      
-    - name: Check formatting
-      run: |
-        echo "🎨 Checking code formatting..."
-        if ! dotnet format --verify-no-changes --verbosity diagnostic; then
-          echo "❌ Code formatting issues found!"
-          echo "💡 Run 'dotnet format' locally to fix formatting issues"
-          exit 1
-        else
-          echo "✅ Code formatting is correct"
-        fi
-
-  conventional-commits:
-    name: Conventional Commits
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+        echo "✅ Project structure validated"
         
     - name: Validate commit messages
       run: |
         echo "📝 Validating commit messages..."
-        
-        # Get commits in this PR
-        commits=$(git log --pretty=format:"%H %s" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
-        
-        echo "Commits to validate:"
-        echo "$commits"
+        commits=$(git log --pretty=format:"%s" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
         
         conventional_pattern="^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?: .+"
         
         invalid_commits=0
-        while IFS= read -r commit; do
-          commit_msg=$(echo "$commit" | cut -d' ' -f2-)
+        while IFS= read -r commit_msg; do
           if [[ ! $commit_msg =~ $conventional_pattern ]]; then
-            echo "❌ Invalid commit message: '$commit_msg'"
-            echo "💡 Should follow pattern: type(scope): description"
-            echo "   Examples: feat: add new feature, fix: resolve bug, docs: update readme"
+            echo "❌ Invalid commit: '$commit_msg'"
+            echo "💡 Use format: type(scope): description"
             invalid_commits=$((invalid_commits + 1))
-          else
-            echo "✅ Valid commit: '$commit_msg'"
           fi
         done <<< "$commits"
         
         if [ $invalid_commits -gt 0 ]; then
           echo "❌ Found $invalid_commits invalid commit message(s)"
-          echo "📖 Learn more about conventional commits: https://www.conventionalcommits.org/"
+          echo "📖 See: https://www.conventionalcommits.org/"
           exit 1
-        else
-          echo "✅ All commit messages follow conventional commits format"
         fi
+        echo "✅ All commit messages valid"
+        
+    - name: Dependency review
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: moderate
+        
+    - name: Check for secrets
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}

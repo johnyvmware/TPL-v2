@@ -18,8 +18,8 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  validate:
-    name: Build, Test & NuGet Security
+  build-test-quality:
+    name: Build, Test & Quality
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     
@@ -72,6 +72,35 @@ jobs:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_MANDI }}
         
+    - name: Code formatting
+      run: |
+        dotnet format --verify-no-changes --verbosity diagnostic
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: test-results-${{ github.event.number }}
+        path: TestResults/
+        retention-days: 3
+
+  security-scan:
+    name: Security Scan
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore --verbosity minimal
+      
     - name: NuGet package security scan
       run: |
         echo "🔍 Scanning NuGet for vulnerabilities..."
@@ -83,16 +112,15 @@ jobs:
         fi
         echo "✅ No security vulnerabilities found"
         
-    - name: Code formatting
-      run: |
-        dotnet format --verify-no-changes --verbosity diagnostic
+    - name: Check for secrets
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Upload artifacts
+    - name: Upload security scan results
       uses: actions/upload-artifact@v4
-      if: failure()
+      if: always()
       with:
-        name: test-results-${{ github.event.number }}
-        path: |
-          TestResults/
-          security-scan.log
+        name: security-scan-${{ github.event.number }}
+        path: security-scan.log
         retention-days: 3

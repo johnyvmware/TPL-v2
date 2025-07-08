@@ -1,4 +1,4 @@
-namespace TransactionProcessingSystem.Configuration;
+THIS SHOULD BE A LINTER ERRORnamespace TransactionProcessingSystem.Configuration;
 
 public record AppSettings
 {

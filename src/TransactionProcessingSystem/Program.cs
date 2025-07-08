@@ -31,7 +31,7 @@ public class Program
 
         using var host = builder.Build();
 
-        var logger = host.Services.GetRequiredService<ILogger<Program>>();
+        var logger = host.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
         logger.LogInformation("Starting Transaction Processing System");
 
         try
@@ -109,29 +109,15 @@ public class Program
         // Configure Neo4j Driver (Singleton pattern as recommended by Neo4j)
         services.AddSingleton<IDriver>(serviceProvider =>
         {
-            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+            var logger = serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
             
             logger.LogInformation("Configuring Neo4j driver for URI: {Uri}", neo4jSettings.ConnectionUri);
-
-            var configBuilder = Config.Builder
-                .WithMaxConnectionPoolSize(neo4jSettings.MaxConnectionPoolSize)
-                .WithConnectionTimeout(TimeSpan.FromSeconds(neo4jSettings.ConnectionTimeoutSeconds))
-                .WithMaxTransactionRetryTime(TimeSpan.FromSeconds(neo4jSettings.MaxTransactionRetryTimeSeconds))
-                .WithTrustStrategy(TrustStrategy.TrustSystemCaSignedCertificates);
-
-            if (neo4jSettings.EnableMetrics)
-            {
-                configBuilder = configBuilder.WithDriverMetrics();
-            }
-
-            var config = configBuilder.ToConfig();
 
             try
             {
                 var driver = GraphDatabase.Driver(
                     neo4jSettings.ConnectionUri,
-                    AuthTokens.Basic(neo4jSettings.Username, neo4jSettings.Password),
-                    config);
+                    AuthTokens.Basic(neo4jSettings.Username, neo4jSettings.Password));
 
                 logger.LogInformation("Neo4j driver configured successfully");
                 return driver;
@@ -153,38 +139,38 @@ public class Program
         services.AddTransient<TransactionFetcher>(provider =>
         {
             var httpClient = provider.GetRequiredService<HttpClient>();
-            var logger = provider.GetRequiredService<ILogger<TransactionFetcher>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TransactionFetcher>>();
             return new TransactionFetcher(httpClient, transactionApiSettings, logger, pipelineSettings.BoundedCapacity);
         });
 
         services.AddTransient<TransactionProcessor>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<TransactionProcessor>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TransactionProcessor>>();
             return new TransactionProcessor(logger, pipelineSettings.BoundedCapacity);
         });
 
         services.AddTransient<EmailEnricher>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<EmailEnricher>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EmailEnricher>>();
             return new EmailEnricher(graphSettings, logger, pipelineSettings.BoundedCapacity);
         });
 
         services.AddTransient<Categorizer>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<Categorizer>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Categorizer>>();
             return new Categorizer(openAISettings, logger, pipelineSettings.BoundedCapacity);
         });
 
         services.AddTransient<Neo4jProcessor>(provider =>
         {
             var neo4jDataAccess = provider.GetRequiredService<INeo4jDataAccess>();
-            var logger = provider.GetRequiredService<ILogger<Neo4jProcessor>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Neo4jProcessor>>();
             return new Neo4jProcessor(neo4jDataAccess, logger, pipelineSettings.BoundedCapacity);
         });
 
         services.AddTransient<CsvExporter>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<CsvExporter>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CsvExporter>>();
             return new CsvExporter(exportSettings, logger, pipelineSettings.BoundedCapacity);
         });
 
@@ -197,7 +183,7 @@ public class Program
             var categorizer = provider.GetRequiredService<Categorizer>();
             var neo4jProcessor = provider.GetRequiredService<Neo4jProcessor>();
             var exporter = provider.GetRequiredService<CsvExporter>();
-            var logger = provider.GetRequiredService<ILogger<TransactionPipeline>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TransactionPipeline>>();
 
             return new TransactionPipeline(
                 fetcher,
@@ -213,7 +199,7 @@ public class Program
         // Services
         services.AddSingleton<MockTransactionApiService>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<MockTransactionApiService>>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MockTransactionApiService>>();
             return new MockTransactionApiService(logger, transactionApiSettings.BaseUrl);
         });
 
@@ -221,9 +207,9 @@ public class Program
             provider.GetRequiredService<MockTransactionApiService>());
     }
 
-    private static async Task InitializeNeo4jAsync(IServiceProvider services, ILogger logger)
+    private static async Task InitializeNeo4jAsync(IServiceProvider services, Microsoft.Extensions.Logging.ILogger logger)
     {
-        using var scope = services.CreateScope();
+        await using var scope = services.CreateAsyncScope();
         var neo4jDataAccess = scope.ServiceProvider.GetService<INeo4jDataAccess>();
         
         if (neo4jDataAccess == null)

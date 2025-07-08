@@ -1,6 +1,6 @@
 using Neo4j.Driver;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 using System.Text.Json;
@@ -75,7 +75,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
 
         try
         {
-            await using var session = _driver.AsyncSession(ConfigureSession);
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Write));
             
             var result = await session.ExecuteWriteAsync(async tx =>
             {
@@ -126,7 +128,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
 
         try
         {
-            await using var session = _driver.AsyncSession(ConfigureSession);
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Write));
             
             await session.ExecuteWriteAsync(async tx =>
             {
@@ -186,7 +190,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
 
         try
         {
-            await using var session = _driver.AsyncSession(ConfigureSession);
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Read));
             
             return await session.ExecuteReadAsync(async tx =>
             {
@@ -230,7 +236,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
 
         try
         {
-            await using var session = _driver.AsyncSession(ConfigureSession);
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Read));
             
             return await session.ExecuteReadAsync(async tx =>
             {
@@ -263,7 +271,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
     {
         try
         {
-            await using var session = _driver.AsyncSession(ConfigureSession);
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Read));
             
             return await session.ExecuteReadAsync(async tx =>
             {
@@ -294,7 +304,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
 
         try
         {
-            await using var session = _driver.AsyncSession(ConfigureSession);
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Write));
             
             foreach (var command in indexCommands)
             {
@@ -324,7 +336,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
 
         try
         {
-            await using var session = _driver.AsyncSession(ConfigureSession);
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Read));
             
             return await session.ExecuteReadAsync(async tx =>
             {
@@ -351,7 +365,9 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
                 RETURN count(DISTINCT n) as nodeCount, count(r) as relCount
                 """;
             
-            await using var fallbackSession = _driver.AsyncSession(ConfigureSession);
+            await using var fallbackSession = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Read));
             return await fallbackSession.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(basicCypher);
@@ -368,15 +384,16 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
         }
     }
 
-    private SessionConfigBuilder ConfigureSession => new SessionConfigBuilder()
-        .WithDatabase(_settings.Database)
-        .WithDefaultAccessMode(AccessMode.Read);
+
 
     public async ValueTask DisposeAsync()
     {
         if (!_disposed)
         {
-            await _driver?.DisposeAsync()!;
+            if (_driver != null)
+            {
+                await _driver.DisposeAsync();
+            }
             _disposed = true;
             _logger.LogDebug("Neo4j driver disposed");
         }

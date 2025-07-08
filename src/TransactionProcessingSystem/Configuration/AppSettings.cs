@@ -1,4 +1,4 @@
-THIS SHOULD BE A LINTER ERRORnamespace TransactionProcessingSystem.Configuration;
+namespace TransactionProcessingSystem.Configuration;
 
 public record AppSettings
 {
@@ -49,10 +49,10 @@ public record PipelineSettings
 
 public record Neo4jSettings
 {
-    public required string ConnectionUri { get; init; }
-    public required string Username { get; init; }
-    public required string Password { get; init; }
-    public string? Database { get; init; }
+    public string ConnectionUri { get; init; } = "neo4j+s://demo.neo4jlabs.com";
+    public string Username { get; init; } = "demo";
+    public string Password { get; init; } = "demo";
+    public string? Database { get; init; } = "neo4j";
     public int MaxConnectionPoolSize { get; init; } = 50;
     public int ConnectionTimeoutSeconds { get; init; } = 30;
     public int MaxTransactionRetryTimeSeconds { get; init; } = 30;

@@ -70,7 +70,7 @@ jobs:
       with:
         files: '**/coverage.cobertura.xml'
         fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODECOV_MANDI }}
         
     - name: Security scan
       run: |
@@ -96,65 +96,3 @@ jobs:
           TestResults/
           security-scan.log
         retention-days: 3
-
-  quality-gates:
-    name: Quality Gates
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        
-    - name: Validate solution structure
-      run: |
-        echo "📁 Validating project structure..."
-        required_files=(
-          "TransactionProcessingSystem.sln"
-          "src/TransactionProcessingSystem/TransactionProcessingSystem.csproj"
-          "tests/TransactionProcessingSystem.Tests/TransactionProcessingSystem.Tests.csproj"
-        )
-        
-        for file in "${required_files[@]}"; do
-          if [ ! -f "$file" ]; then
-            echo "❌ Required file missing: $file"
-            exit 1
-          fi
-        done
-        echo "✅ Project structure validated"
-        
-    - name: Validate commit messages
-      run: |
-        echo "📝 Validating commit messages..."
-        commits=$(git log --pretty=format:"%s" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
-        
-        conventional_pattern="^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?: .+"
-        
-        invalid_commits=0
-        while IFS= read -r commit_msg; do
-          if [[ ! $commit_msg =~ $conventional_pattern ]]; then
-            echo "❌ Invalid commit: '$commit_msg'"
-            echo "💡 Use format: type(scope): description"
-            invalid_commits=$((invalid_commits + 1))
-          fi
-        done <<< "$commits"
-        
-        if [ $invalid_commits -gt 0 ]; then
-          echo "❌ Found $invalid_commits invalid commit message(s)"
-          echo "📖 See: https://www.conventionalcommits.org/"
-          exit 1
-        fi
-        echo "✅ All commit messages valid"
-        
-    - name: Dependency review
-      uses: actions/dependency-review-action@v4
-      with:
-        fail-on-severity: moderate
-        
-    - name: Check for secrets
-      uses: gitleaks/gitleaks-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}

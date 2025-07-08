@@ -66,7 +66,7 @@ jobs:
       with:
         files: '**/coverage.cobertura.xml'
         fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODECOV_MANDI }}
 
   security-scan:
     name: Security Scan
@@ -99,7 +99,6 @@ jobs:
       uses: gitleaks/gitleaks-action@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
         
     - name: Upload security scan results
       uses: actions/upload-artifact@v4

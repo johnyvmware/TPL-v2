@@ -19,7 +19,7 @@ env:
 
 jobs:
   validate:
-    name: Build, Test & Security
+    name: Build, Test & NuGet Security
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     
@@ -72,9 +72,9 @@ jobs:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_MANDI }}
         
-    - name: Security scan
+    - name: NuGet package security scan
       run: |
-        echo "🔍 Scanning for vulnerabilities..."
+        echo "🔍 Scanning NuGet for vulnerabilities..."
         dotnet list package --vulnerable --include-transitive 2>&1 | tee security-scan.log
         if grep -q "has the following vulnerable packages" security-scan.log; then
           echo "❌ Security vulnerabilities found!"

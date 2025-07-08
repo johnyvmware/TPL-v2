@@ -1,9 +1,9 @@
 # TPL Dataflow Transaction Processing System
 
-[![CI/CD Pipeline](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml)
-[![PR Validation](https://github.com/your-username/transaction-processing-system/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/your-username/transaction-processing-system/actions/workflows/pr-validation.yml)
-[![Release & Deploy](https://github.com/your-username/transaction-processing-system/actions/workflows/release.yml/badge.svg)](https://github.com/your-username/transaction-processing-system/actions/workflows/release.yml)
-[![codecov](https://codecov.io/gh/your-username/transaction-processing-system/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/transaction-processing-system)
+[![CI/CD Pipeline](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml)
+[![PR Validation](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml)
+[![Release & Deploy](https://github.com/johnyvmware/TPL-v2/actions/workflows/release.yml/badge.svg)](https://github.com/johnyvmware/TPL-v2/actions/workflows/release.yml)
+[![codecov](https://codecov.io/gh/johnyvmware/TPL-v2/branch/main/graph/badge.svg)](https://codecov.io/gh/johnyvmware/TPL-v2)
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -11,12 +11,54 @@
 
 ## 🚀 CI/CD Status
 
+### Workflow Status
 | Workflow | Status | Description |
 |----------|--------|-------------|
-| **CI/CD Pipeline** | ![CI Status](https://github.com/your-username/transaction-processing-system/actions/workflows/ci.yml/badge.svg) | Continuous integration with build, test, and quality checks |
-| **PR Validation** | ![PR Status](https://github.com/your-username/transaction-processing-system/actions/workflows/pr-validation.yml/badge.svg) | Pull request validation and code quality enforcement |
-| **Release & Deploy** | ![Release Status](https://github.com/your-username/transaction-processing-system/actions/workflows/release.yml/badge.svg) | Automated releases and multi-environment deployments |
+| **CI/CD Pipeline** | ![CI Status](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml/badge.svg) | Continuous integration with build, test, and quality checks |
+| **PR Validation** | ![PR Status](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml/badge.svg) | Pull request validation and code quality enforcement |
+| **Release & Deploy** | ![Release Status](https://github.com/johnyvmware/TPL-v2/actions/workflows/release.yml/badge.svg) | Automated releases and multi-environment deployments |
 | **Dependency Updates** | ![Dependabot Status](https://img.shields.io/badge/dependabot-enabled-brightgreen.svg) | Automated dependency updates and security patches |
+
+### Quality Metrics
+| Metric | Status | Description |
+|--------|--------|-------------|
+| **Code Coverage** | ![Code Coverage](https://codecov.io/gh/johnyvmware/TPL-v2/branch/main/graph/badge.svg) | Test coverage percentage and trends |
+| **Security Scan** | ![Security](https://img.shields.io/badge/security-scanning-brightgreen.svg) | Automated vulnerability detection |
+| **Code Quality** | ![Quality](https://img.shields.io/badge/code-quality-enforced-brightgreen.svg) | Static analysis and formatting checks |
+| **Build Status** | ![Build](https://img.shields.io/badge/build-passing-brightgreen.svg) | Latest build status on main branch |
+
+### Pipeline Features
+- ✅ **Automated Testing**: Unit tests, integration tests, and coverage reporting
+- ✅ **Security Scanning**: Dependency vulnerability checks and secret detection
+- ✅ **Code Quality**: Format validation and static analysis
+- ✅ **Multi-Platform**: Builds for Windows, Linux, and macOS
+- ✅ **Artifact Management**: Automated artifact upload and retention
+- ✅ **Release Automation**: Tag-based releases with changelog generation
+- ✅ **Feature Branch Workflow**: CI/CD validation on feature branches via PRs
+
+## 🌿 Branching Strategy
+
+This project follows a **main branch workflow** with feature branches:
+
+### Branch Structure
+- **`main`**: Production-ready code, protected branch
+- **`feature/*`**: Feature development branches (e.g., `feature/user-authentication`)
+
+### Development Workflow
+1. **Create feature branch** from `main`
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+2. **Develop and test** your feature locally
+3. **Push and create PR** to `main`
+4. **CI/CD validation** runs automatically on PR
+5. **Code review** and approval required
+6. **Merge to main** triggers production deployment
+
+### CI/CD Flow
+- **Feature Branches**: PR validation and testing
+- **Main Branch**: Full CI/CD pipeline with artifact generation
+- **Release Tags**: Production deployment trigger
 
 ## 🏗️ Architecture
 
@@ -108,8 +150,8 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/transaction-processing-system.git
-   cd transaction-processing-system
+   git clone https://github.com/johnyvmware/TPL-v2.git
+   cd TPL-v2
    ```
 
 2. **Restore dependencies**
@@ -141,7 +183,6 @@ The system includes a comprehensive CI/CD pipeline with:
 - **Continuous Integration**: Automated build, test, and quality checks on every commit
 - **Security Scanning**: Vulnerability detection and dependency auditing
 - **Multi-Platform Builds**: Linux, Windows, and macOS artifacts
-- **Staged Deployments**: Automatic staging deployments for testing
 - **Production Releases**: Protected production deployments with approval gates
 
 ### Environment Configuration
@@ -149,7 +190,6 @@ The system includes a comprehensive CI/CD pipeline with:
 | Environment | Branch | Deployment Trigger | URL |
 |-------------|--------|-------------------|-----|
 | **Development** | `feature/*` | Manual | Local development |
-| **Staging** | `develop` | Automatic on push | `https://staging.example.com` |
 | **Production** | `main` | Release tags | `https://app.example.com` |
 
 ### Release Process
@@ -164,8 +204,6 @@ The system includes a comprehensive CI/CD pipeline with:
    - Validates the release
    - Builds multi-platform artifacts
    - Creates GitHub release with changelog
-   - Deploys to staging
-   - Awaits production approval
    - Deploys to production
 
 ## 🔒 Security & Quality
@@ -261,9 +299,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- 📖 **Documentation**: [Wiki](https://github.com/your-username/transaction-processing-system/wiki)
-- 🐛 **Bug Reports**: [Issues](https://github.com/your-username/transaction-processing-system/issues)
-- 💡 **Feature Requests**: [Discussions](https://github.com/your-username/transaction-processing-system/discussions)
+- 📖 **Documentation**: [Wiki](https://github.com/johnyvmware/TPL-v2/wiki)
+- 🐛 **Bug Reports**: [Issues](https://github.com/johnyvmware/TPL-v2/issues)
+- 💡 **Feature Requests**: [Discussions](https://github.com/johnyvmware/TPL-v2/discussions)
 - 📧 **Contact**: [email@example.com](mailto:email@example.com)
 
 ---

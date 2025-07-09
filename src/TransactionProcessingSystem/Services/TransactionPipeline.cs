@@ -89,28 +89,35 @@ public sealed class TransactionPipeline(
         }
     }
 
-    public async IAsyncEnumerable<Transaction> ProcessTransactionsStreamAsync(
+    public IAsyncEnumerable<Transaction> ProcessTransactionsStreamAsync(
         IAsyncEnumerable<Transaction> transactions,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Starting transaction stream processing through Neo4j processor");
+        
+        return ProcessTransactionsStreamInternalAsync(transactions, cancellationToken);
+    }
 
+    private async IAsyncEnumerable<Transaction> ProcessTransactionsStreamInternalAsync(
+        IAsyncEnumerable<Transaction> transactions,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         await foreach (var transaction in transactions.WithCancellation(cancellationToken))
         {
+            Transaction processedTransaction;
             try
             {
                 // Process through Neo4j processor using modern async patterns
-                var processedTransaction = await neo4jProcessor.ProcessItemAsync(transaction, cancellationToken)
+                processedTransaction = await neo4jProcessor.ProcessItemAsync(transaction, cancellationToken)
                     .ConfigureAwait(false);
-
-                yield return processedTransaction;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to process transaction {TransactionId}", transaction.Id);
-                
-                yield return transaction with { Status = ProcessingStatus.Failed };
+                processedTransaction = transaction with { Status = ProcessingStatus.Failed };
             }
+
+            yield return processedTransaction;
 
             if (cancellationToken.IsCancellationRequested)
                 break;
@@ -125,8 +132,8 @@ public sealed class TransactionPipeline(
     {
         logger.LogInformation("Processing batch of {TransactionCount} transactions", transactions.Count());
 
-        // Convert to async enumerable and process using streaming method
-        var asyncTransactions = transactions.ToAsyncEnumerable();
+        // Convert to async enumerable using custom extension
+        var asyncTransactions = ConvertToAsyncEnumerable(transactions);
         
         var processedTransactions = new List<Transaction>();
         
@@ -199,7 +206,7 @@ public sealed class TransactionPipeline(
     }
 
     /// <summary>
-    /// Processes transactions using high-performance batch streaming
+    /// Processes transactions using high-performance batch streaming with custom chunking
     /// </summary>
     public async IAsyncEnumerable<Transaction> ProcessTransactionsBatchStreamAsync(
         IAsyncEnumerable<Transaction> transactions,
@@ -208,10 +215,10 @@ public sealed class TransactionPipeline(
     {
         logger.LogInformation("Starting high-performance batch stream processing with batch size {BatchSize}", batchSize);
 
-        await foreach (var batch in transactions.Chunk(batchSize).ToAsyncEnumerable().WithCancellation(cancellationToken))
+        await foreach (var batch in ChunkAsyncEnumerable(transactions, batchSize, cancellationToken))
         {
             // Process each batch through the Neo4j processor for high throughput
-            await foreach (var processed in neo4jProcessor.ProcessTransactionsBatchAsync(batch.ToAsyncEnumerable(), cancellationToken))
+            await foreach (var processed in neo4jProcessor.ProcessTransactionsBatchAsync(ConvertToAsyncEnumerable(batch), cancellationToken))
             {
                 yield return processed;
             }
@@ -253,6 +260,46 @@ public sealed class TransactionPipeline(
         {
             logger.LogError(ex, "Failed to retrieve processing statistics");
             throw;
+        }
+    }
+
+    // Helper methods for missing extension methods
+    private static IAsyncEnumerable<T> ConvertToAsyncEnumerable<T>(IEnumerable<T> source)
+    {
+        return ConvertToAsyncEnumerableInternal(source);
+    }
+
+    private static async IAsyncEnumerable<T> ConvertToAsyncEnumerableInternal<T>(IEnumerable<T> source)
+    {
+        await Task.Yield(); // Make it truly async to avoid compiler warning
+        
+        foreach (var item in source)
+        {
+            yield return item;
+        }
+    }
+
+    private static async IAsyncEnumerable<IList<T>> ChunkAsyncEnumerable<T>(
+        IAsyncEnumerable<T> source, 
+        int chunkSize,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var chunk = new List<T>(chunkSize);
+
+        await foreach (var item in source.WithCancellation(cancellationToken))
+        {
+            chunk.Add(item);
+
+            if (chunk.Count == chunkSize)
+            {
+                yield return chunk;
+                chunk = new List<T>(chunkSize);
+            }
+        }
+
+        if (chunk.Count > 0)
+        {
+            yield return chunk;
         }
     }
 

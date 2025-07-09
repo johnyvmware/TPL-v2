@@ -31,9 +31,9 @@ public sealed class Neo4jDataAccess(
             var result = await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync("RETURN 1 AS test").ConfigureAwait(false);
-                var record = await cursor.SingleAsync(cancellationToken).ConfigureAwait(false);
+                var record = await cursor.SingleAsync().ConfigureAwait(false);
                 return record["test"].As<int>();
-            }, ConfigureTransaction("connectivity_check"), cancellationToken).ConfigureAwait(false);
+            }, ConfigureTransaction("connectivity_check")).ConfigureAwait(false);
                 
             logger.LogInformation("Neo4j connectivity verified successfully");
             return result == 1;
@@ -73,7 +73,7 @@ public sealed class Neo4jDataAccess(
             await session.ExecuteWriteAsync(async tx =>
             {
                 // Create constraints first using modern collection iteration
-                await foreach (var constraint in constraints.ToAsyncEnumerable())
+                foreach (var constraint in constraints)
                 {
                     try
                     {
@@ -87,7 +87,7 @@ public sealed class Neo4jDataAccess(
                 }
 
                 // Create indexes using modern async patterns
-                await foreach (var index in indexes.ToAsyncEnumerable())
+                foreach (var index in indexes)
                 {
                     try
                     {
@@ -100,8 +100,8 @@ public sealed class Neo4jDataAccess(
                     }
                 }
 
-                return ValueTask.CompletedTask;
-            }, ConfigureTransaction("schema_initialization", GetDatabaseVersion()), cancellationToken).ConfigureAwait(false);
+                return Task.CompletedTask;
+            }, ConfigureTransaction("schema_initialization", GetDatabaseVersion())).ConfigureAwait(false);
 
             logger.LogInformation("Neo4j database schema initialized successfully");
         }
@@ -210,9 +210,9 @@ public sealed class Neo4jDataAccess(
             var result = await session.ExecuteWriteAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(cypher, parameters).ConfigureAwait(false);
-                var record = await cursor.SingleAsync(cancellationToken).ConfigureAwait(false);
+                var record = await cursor.SingleAsync().ConfigureAwait(false);
                 return record["transactionId"].As<string>();
-            }, ConfigureTransaction("upsert_transaction", transaction.Id), cancellationToken).ConfigureAwait(false);
+            }, ConfigureTransaction("upsert_transaction", transaction.Id)).ConfigureAwait(false);
 
             logger.LogDebug("Successfully upserted transaction {TransactionId} with relationships", transaction.Id);
             return result;
@@ -285,14 +285,14 @@ public sealed class Neo4jDataAccess(
             yield return record.TryGetValue("id", out var id) && id is not null
                 ? new Transaction
                 {
-                    Id = id.ToString() ?? "",
-                    Date = DateTime.TryParse(record["date"]?.ToString(), out var date) ? date : DateTime.UtcNow,
-                    Amount = Convert.ToDecimal(record["amount"]),
-                    Description = record["description"]?.ToString() ?? "",
-                    CleanDescription = record["cleanDescription"]?.ToString(),
-                    Category = record["category"]?.ToString(),
-                    Status = Enum.TryParse<ProcessingStatus>(record["status"]?.ToString(), out var status) 
-                        ? status : ProcessingStatus.Processed
+                    Id = id.ToString()!,
+                    Date = DateTime.TryParse(record.TryGetValue("date", out var date) ? date?.ToString() : null, out var dateValue) ? dateValue : DateTime.UtcNow,
+                    Amount = Convert.ToDecimal(record.TryGetValue("amount", out var amount) ? amount : 0),
+                    Description = record.TryGetValue("description", out var desc) ? desc?.ToString() ?? "" : "",
+                    CleanDescription = record.TryGetValue("cleanDescription", out var cleanDesc) ? cleanDesc?.ToString() : null,
+                    Category = record.TryGetValue("category", out var cat) ? cat?.ToString() : null,
+                    Status = Enum.TryParse<ProcessingStatus>(record.TryGetValue("status", out var status) ? status?.ToString() : null, out var statusValue) 
+                        ? statusValue : ProcessingStatus.Processed
                 }
                 : throw new InvalidOperationException($"Invalid transaction record for {transaction.Id}");
         }
@@ -342,11 +342,11 @@ public sealed class Neo4jDataAccess(
             return await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(cypher).ConfigureAwait(false);
-                var record = await cursor.SingleAsync(cancellationToken).ConfigureAwait(false);
+                var record = await cursor.SingleAsync().ConfigureAwait(false);
                 var analyticsData = record["analytics"].As<IDictionary<string, object>>();
                 
                 return MapToTransactionAnalytics(analyticsData);
-            }, ConfigureTransaction("get_analytics"), cancellationToken).ConfigureAwait(false);
+            }, ConfigureTransaction("get_analytics")).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -398,8 +398,8 @@ public sealed class Neo4jDataAccess(
         {
             yield return new GraphStatistic(
                 "Node",
-                nodeRecord["label"]?.ToString() ?? "Unknown",
-                Convert.ToInt64(nodeRecord["count"] ?? 0));
+                nodeRecord.TryGetValue("label", out var label) ? label?.ToString() ?? "Unknown" : "Unknown",
+                Convert.ToInt64(nodeRecord.TryGetValue("count", out var count) ? count : 0));
         }
 
         // Stream relationship statistics  
@@ -407,8 +407,8 @@ public sealed class Neo4jDataAccess(
         {
             yield return new GraphStatistic(
                 "Relationship", 
-                relRecord["relationshipType"]?.ToString() ?? "Unknown",
-                Convert.ToInt64(relRecord["count"] ?? 0));
+                relRecord.TryGetValue("relationshipType", out var relType) ? relType?.ToString() ?? "Unknown" : "Unknown",
+                Convert.ToInt64(relRecord.TryGetValue("count", out var count) ? count : 0));
         }
     }
 
@@ -420,7 +420,7 @@ public sealed class Neo4jDataAccess(
         object? parameters,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var record in session.ExecuteReadAsync(async tx =>
+        var result = await session.ExecuteReadAsync(async tx =>
         {
             var cursor = await tx.RunAsync(cypher, parameters).ConfigureAwait(false);
             var records = new List<IDictionary<string, object>>();
@@ -430,8 +430,10 @@ public sealed class Neo4jDataAccess(
                 records.Add(record.Keys.ToDictionary(key => key, key => record[key].As<object>()));
             }
             
-            return records.ToAsyncEnumerable();
-        }, ConfigureTransaction("custom_query"), cancellationToken).ConfigureAwait(false))
+            return records;
+        }, ConfigureTransaction("custom_query")).ConfigureAwait(false);
+
+        foreach (var record in result)
         {
             yield return record;
         }
@@ -468,34 +470,34 @@ public sealed class Neo4jDataAccess(
         return await session.ExecuteWriteAsync(async tx =>
         {
             var cursor = await tx.RunAsync(cypher, parameters).ConfigureAwait(false);
-            var record = await cursor.SingleAsync(cancellationToken).ConfigureAwait(false);
+            var record = await cursor.SingleAsync().ConfigureAwait(false);
             return record["transactionId"].As<string>();
-        }, ConfigureTransaction("batch_upsert"), cancellationToken).ConfigureAwait(false);
+        }, ConfigureTransaction("batch_upsert")).ConfigureAwait(false);
     }
 
     private static TransactionAnalytics MapToTransactionAnalytics(IDictionary<string, object> data) => new()
     {
-        TotalTransactions = Convert.ToInt64(data.GetValueOrDefault("totalTransactions", 0L)),
-        TotalAmount = Convert.ToDecimal(data.GetValueOrDefault("totalAmount", 0.0)),
-        AverageAmount = Convert.ToDecimal(data.GetValueOrDefault("averageAmount", 0.0)),
-        MinAmount = Convert.ToDecimal(data.GetValueOrDefault("minAmount", 0.0)),
-        MaxAmount = Convert.ToDecimal(data.GetValueOrDefault("maxAmount", 0.0)),
-        Categories = data.GetValueOrDefault("categories", new List<object>()) switch
+        TotalTransactions = Convert.ToInt64(GetValueSafely(data, "totalTransactions", 0L)),
+        TotalAmount = Convert.ToDecimal(GetValueSafely(data, "totalAmount", 0.0)),
+        AverageAmount = Convert.ToDecimal(GetValueSafely(data, "averageAmount", 0.0)),
+        MinAmount = Convert.ToDecimal(GetValueSafely(data, "minAmount", 0.0)),
+        MaxAmount = Convert.ToDecimal(GetValueSafely(data, "maxAmount", 0.0)),
+        Categories = GetValueSafely(data, "categories", new List<object>()) switch
         {
             IEnumerable<object> categories => categories.Select(c => c?.ToString() ?? "").ToArray(),
             _ => []
         },
-        UniqueCategories = Convert.ToInt32(data.GetValueOrDefault("uniqueCategories", 0)),
-        DateRange = MapToDateRange(data.GetValueOrDefault("dateRange", new Dictionary<string, object>())),
-        Relationships = MapToRelationshipStats(data.GetValueOrDefault("relationships", new Dictionary<string, object>())),
-        WeekendTransactions = Convert.ToInt64(data.GetValueOrDefault("weekendTransactions", 0L)),
-        TopCategories = data.GetValueOrDefault("topCategories", new List<object>()) switch
+        UniqueCategories = Convert.ToInt32(GetValueSafely(data, "uniqueCategories", 0)),
+        DateRange = MapToDateRange(GetValueSafely(data, "dateRange", new Dictionary<string, object>())),
+        Relationships = MapToRelationshipStats(GetValueSafely(data, "relationships", new Dictionary<string, object>())),
+        WeekendTransactions = Convert.ToInt64(GetValueSafely(data, "weekendTransactions", 0L)),
+        TopCategories = GetValueSafely(data, "topCategories", new List<object>()) switch
         {
             IEnumerable<object> categories => categories
                 .OfType<IDictionary<string, object>>()
                 .Select(c => new CategoryBreakdown(
-                    c.GetValueOrDefault("category", "Unknown")?.ToString() ?? "Unknown",
-                    Convert.ToInt64(c.GetValueOrDefault("count", 0L))))
+                    GetValueSafely(c, "category", "Unknown")?.ToString() ?? "Unknown",
+                    Convert.ToInt64(GetValueSafely(c, "count", 0L))))
                 .ToArray(),
             _ => []
         }
@@ -504,21 +506,26 @@ public sealed class Neo4jDataAccess(
     private static DateRange MapToDateRange(object? data) => data switch
     {
         IDictionary<string, object> dict => new DateRange(
-            DateTime.TryParse(dict.GetValueOrDefault("earliest")?.ToString(), out var earliest) ? earliest : null,
-            DateTime.TryParse(dict.GetValueOrDefault("latest")?.ToString(), out var latest) ? latest : null,
-            Convert.ToInt32(dict.GetValueOrDefault("uniqueDays", 0)),
-            Convert.ToInt32(dict.GetValueOrDefault("uniqueMonths", 0)),
-            Convert.ToInt32(dict.GetValueOrDefault("uniqueYears", 0))),
+            DateTime.TryParse(GetValueSafely(dict, "earliest")?.ToString(), out var earliest) ? earliest : null,
+            DateTime.TryParse(GetValueSafely(dict, "latest")?.ToString(), out var latest) ? latest : null,
+            Convert.ToInt32(GetValueSafely(dict, "uniqueDays", 0)),
+            Convert.ToInt32(GetValueSafely(dict, "uniqueMonths", 0)),
+            Convert.ToInt32(GetValueSafely(dict, "uniqueYears", 0))),
         _ => new DateRange(null, null, 0, 0, 0)
     };
 
     private static RelationshipStats MapToRelationshipStats(object? data) => data switch
     {
         IDictionary<string, object> dict => new RelationshipStats(
-            Convert.ToInt64(dict.GetValueOrDefault("categorySimilarities", 0L)),
-            Convert.ToInt64(dict.GetValueOrDefault("amountSimilarities", 0L))),
+            Convert.ToInt64(GetValueSafely(dict, "categorySimilarities", 0L)),
+            Convert.ToInt64(GetValueSafely(dict, "amountSimilarities", 0L))),
         _ => new RelationshipStats(0, 0)
     };
+
+    private static object? GetValueSafely(IDictionary<string, object>? dict, string key, object? defaultValue = null)
+    {
+        return dict?.TryGetValue(key, out var value) == true ? value : defaultValue;
+    }
 
     private async ValueTask<TransactionAnalytics> GetBasicAnalyticsAsync(CancellationToken cancellationToken)
     {
@@ -538,7 +545,7 @@ public sealed class Neo4jDataAccess(
             return await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(basicCypher).ConfigureAwait(false);
-                var record = await cursor.SingleAsync(cancellationToken).ConfigureAwait(false);
+                var record = await cursor.SingleAsync().ConfigureAwait(false);
                 
                 return new TransactionAnalytics
                 {
@@ -554,7 +561,7 @@ public sealed class Neo4jDataAccess(
                     WeekendTransactions = 0,
                     TopCategories = []
                 };
-            }, ConfigureTransaction("basic_analytics"), cancellationToken).ConfigureAwait(false);
+            }, ConfigureTransaction("basic_analytics")).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -611,6 +618,21 @@ public sealed class Neo4jDataAccess(
             }
             _disposed = true;
             logger.LogDebug("Neo4j driver disposed");
+        }
+    }
+}
+
+// Extension method to handle cursor async enumeration
+public static class CursorExtensions
+{
+    public static async IAsyncEnumerable<IRecord> ToAsyncEnumerable(
+        this IResultCursor cursor,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        while (await cursor.FetchAsync().ConfigureAwait(false))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return cursor.Current;
         }
     }
 }

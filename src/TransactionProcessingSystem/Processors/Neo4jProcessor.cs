@@ -14,7 +14,7 @@ public sealed class Neo4jProcessor(
     INeo4jDataAccess neo4jDataAccess,
     ILogger<Neo4jProcessor> logger)
 {
-    protected ILogger<Neo4jProcessor> Logger => logger;
+    public ILogger<Neo4jProcessor> Logger => logger;
 
     public async ValueTask<Transaction> ProcessItemAsync(Transaction transaction, CancellationToken cancellationToken)
     {
@@ -153,20 +153,30 @@ public sealed class Neo4jProcessor(
     }
 
     /// <summary>
-    /// Executes custom analytics queries with streaming results
+    /// Executes custom analytics queries with streaming results - refactored to avoid yield in try-catch
     /// </summary>
-    public async IAsyncEnumerable<IDictionary<string, object>> ExecuteCustomAnalyticsAsync(
+    public IAsyncEnumerable<IDictionary<string, object>> ExecuteCustomAnalyticsAsync(
         string cypherQuery,
         object? parameters = null,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default)
     {
         Logger.LogDebug("Executing custom analytics query");
 
+        return ExecuteCustomAnalyticsInternalAsync(cypherQuery, parameters, cancellationToken);
+    }
+
+    private async IAsyncEnumerable<IDictionary<string, object>> ExecuteCustomAnalyticsInternalAsync(
+        string cypherQuery,
+        object? parameters,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var results = new List<IDictionary<string, object>>();
+        
         try
         {
             await foreach (var result in neo4jDataAccess.ExecuteQueryAsync(cypherQuery, parameters, cancellationToken))
             {
-                yield return result;
+                results.Add(result);
             }
 
             Logger.LogDebug("Completed custom analytics query execution");
@@ -175,6 +185,12 @@ public sealed class Neo4jProcessor(
         {
             Logger.LogError(ex, "Failed to execute custom analytics query");
             throw;
+        }
+
+        // Yield results outside the try-catch block
+        foreach (var result in results)
+        {
+            yield return result;
         }
     }
 

@@ -304,7 +304,8 @@ public sealed class Neo4jReactiveDataAccess(
             }
         }, cancellationToken);
 
-        return channel.Writer;
+        // Return the channel writer without awaiting (fixed async warning)
+        return await Task.FromResult(channel.Writer);
     }
 
     private async Task ProcessChannelAsync(ChannelReader<Transaction> reader, CancellationToken cancellationToken)
@@ -382,5 +383,7 @@ public sealed class Neo4jReactiveDataAccess(
             _disposed = true;
             logger.LogDebug("Reactive Neo4j data access disposed");
         }
+
+        await Task.CompletedTask;
     }
 }

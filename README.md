@@ -1,50 +1,28 @@
 # Transaction Processing System
 
-[![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
-[![NUnit](https://img.shields.io/badge/Testing-NUnit-green.svg)](https://nunit.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+> **A next-generation transaction processing platform** featuring a high-performance TPL Dataflow pipeline, intelligent categorization with OpenAI GPT-4, advanced analytics via Neo4j graph database, seamless Microsoft Graph integration, and robust automated testing with a full CI/CD pipeline.
 
-> **Modern Transaction Processing System** with TPL Dataflow pipeline, Neo4j graph database integration, and comprehensive testing.
+## 🚀 Automation & CI/CD
 
-## 🚀 Quick Start
+Our CI/CD and automation suite ensures every commit is built, tested, and delivered with maximum reliability and security.
 
-### Prerequisites
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Neo4j Database](https://neo4j.com/download/) (optional for full functionality)
+| Component                | Status                                                                                                   | Description                                              |
+|--------------------------|----------------------------------------------------------------------------------------------------------|----------------------------------------------------------|
+| **Main CI/CD Pipeline**  | ![CI/CD](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml/badge.svg)                      | Orchestrates build, test, security, and release on `main`|
+| &nbsp;&nbsp;• Build & Test      | ![Build](https://img.shields.io/badge/build-automated-blue.svg)                                         | Automated .NET build, NUnit tests, and coverage analysis |
+| &nbsp;&nbsp;• Security Scan     | ![Security](https://img.shields.io/badge/security-scan-green.svg)                                      | Scans for vulnerabilities and secrets                    |
+| &nbsp;&nbsp;• Release Artifacts | ![Artifacts](https://img.shields.io/badge/artifacts-generated-purple.svg)                               | Publishes self-contained application packages            |
+| **PR Validation**        | ![PR Validation](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml/badge.svg)     | Enforces quality gates for all pull requests             |
+| **Code Coverage**        | ![Coverage](https://codecov.io/gh/johnyvmware/TPL-v2/branch/main/graph/badge.svg)                        | Tracks and reports test coverage metrics                 |
+| **Code Formatting**      | ![Format](https://img.shields.io/badge/dotnet_format-enforced-blue.svg)                                  | Enforces consistent code style automatically             |
+| **Dependency Updates**   | ![Dependabot](https://img.shields.io/badge/dependabot-weekly-blue.svg)                                   | Keeps NuGet and GitHub Actions dependencies up to date   |
 
-### Build and Run
-```bash
-# Clone the repository
-git clone https://github.com/johnyvmware/TPL-v2.git
-cd TPL-v2
-
-# Build the solution
-dotnet build
-
-# Run tests
-dotnet test
-
-# Run the application
-dotnet run --project src/TransactionProcessingSystem
-```
-
-## 📁 Project Structure
-
-```
-TPL-v2/
-├── src/
-│   └── TransactionProcessingSystem/           # Main application
-│       ├── Components/                        # Processing components
-│       ├── Models/                           # Data models
-│       ├── Services/                         # Business services
-│       ├── Configuration/                    # App configuration
-│       └── Pipeline/                         # TPL Dataflow pipeline
-├── tests/
-│   └── TransactionProcessingSystem.Tests/    # Consolidated test project
-│       ├── UnitTests/                        # Unit tests
-│       └── IntegrationTests/                 # Integration tests
-└── TPL-v2.sln                              # Solution file
-```
+**Highlights:**
+- **Full automation**: Every push and PR triggers the pipeline for instant feedback.
+- **Security-first**: Integrated scanning for vulnerabilities and secrets.
+- **Quality assurance**: Automated tests, code coverage, and formatting checks on every change.
+- **Continuous delivery**: Artifacts are built and published for every release.
+- **Effortless maintenance**: Dependencies are updated automatically via Dependabot.
 
 ## 🏗️ Architecture
 
@@ -103,137 +81,6 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
 - Transaction relationship mapping
 - Real-time similarity detection
 - IAsyncEnumerable streaming for large datasets
-
-## 🔧 Configuration
-
-Create an `appsettings.json` file:
-
-```json
-{
-  "OpenAI": {
-    "ApiKey": "your-openai-api-key",
-    "Model": "gpt-4o-mini",
-    "MaxTokens": 200,
-    "Temperature": 0.1
-  },
-  "MicrosoftGraph": {
-    "ClientId": "your-azure-app-client-id",
-    "ClientSecret": "your-azure-app-client-secret",
-    "TenantId": "your-azure-tenant-id",
-    "EmailSearchDays": 2
-  },
-  "Neo4j": {
-    "ConnectionUri": "neo4j://localhost:7687",
-    "Username": "neo4j",
-    "Password": "your-password",
-    "Database": "neo4j",
-    "MaxConnectionPoolSize": 10,
-    "ConnectionTimeoutSeconds": 30
-  },
-  "TransactionApi": {
-    "BaseUrl": "https://api.yourbank.com",
-    "MaxRetries": 3,
-    "TimeoutSeconds": 30
-  },
-  "Export": {
-    "OutputDirectory": "./output",
-    "BufferSize": 100
-  },
-  "Pipeline": {
-    "BoundedCapacity": 100,
-    "MaxDegreeOfParallelism": 4,
-    "TimeoutMinutes": 10
-  }
-}
-```
-
-## 🧪 Testing
-
-The project uses **NUnit** as the testing framework with comprehensive test coverage:
-
-### Test Structure
-```
-tests/TransactionProcessingSystem.Tests/
-├── UnitTests/
-│   └── BasicTests.cs                    # Core model and logic tests
-├── IntegrationTests/                    # End-to-end integration tests
-└── SimpleTests.cs                       # Basic functionality tests
-```
-
-### Running Tests
-```bash
-# Run all tests
-dotnet test
-
-# Run tests with verbose output
-dotnet test --verbosity normal
-
-# Run tests with coverage (if configured)
-dotnet test --collect:"XPlat Code Coverage"
-```
-
-### Test Features
-- ✅ **Unit Tests**: Core business logic and model validation
-- ✅ **Integration Tests**: Database and external service integration
-- ✅ **Mocking**: Moq framework for dependency isolation
-- ✅ **Assertions**: FluentAssertions for readable test assertions
-- ✅ **Async Testing**: Full support for async/await patterns
-
-## 📋 Output
-
-The system generates CSV files with the format: `transactions_yyyyMMdd_HHmmss.csv`
-
-**Columns**: Id, Date, Amount, Description, CleanDescription, EmailSubject, EmailSnippet, Category, Status
-
-## 🔒 Security & Quality
-
-### Security Features
-- ✅ **Secure Configuration**: Environment-based secrets management
-- ✅ **HTTPS Enforcement**: Secure communication channels
-- ✅ **Input Validation**: Comprehensive data validation
-- ✅ **Error Handling**: Robust exception handling and logging
-
-### Quality Assurance
-- ✅ **Comprehensive Testing**: Unit and integration test coverage
-- ✅ **Code Standards**: Consistent coding style and conventions
-- ✅ **Static Analysis**: Built-in .NET analyzers
-- ✅ **Modern C# Features**: Leverages latest C# language features
-
-## 📊 Monitoring & Observability
-
-### Built-in Logging
-- **Console Logging**: Development and container environments
-- **Structured Logs**: JSON formatted logs for easy parsing
-- **Performance Metrics**: Transaction processing times and throughput
-- **Error Tracking**: Comprehensive error reporting and stack traces
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes following the coding standards
-4. Add tests for new functionality
-5. Ensure all tests pass (`dotnet test`)
-6. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-## 🔧 Development Tools
-
-- **Framework**: .NET 8.0 with latest C# features
-- **Testing**: NUnit with FluentAssertions for readable tests
-- **Mocking**: Moq for dependency isolation
-- **Database**: Neo4j for graph-based analytics
-- **Package Management**: NuGet with modern package references
-- **IDE Support**: Visual Studio, VS Code, Rider compatible
-
-## 🆘 Support
-
-For questions, issues, or contributions:
-
-- 🐛 **Bug Reports**: Create an issue with detailed reproduction steps
-- 💡 **Feature Requests**: Open a discussion for new feature ideas
-- 📖 **Documentation**: Check the inline code documentation and XML comments
 
 ---
 

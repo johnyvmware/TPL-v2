@@ -30,19 +30,8 @@ public class Neo4jProcessor : ProcessorBase<Transaction, Transaction>
             var transactionId = await _neo4jDataAccess.UpsertTransactionAsync(transaction);
             _logger.LogDebug("Successfully stored transaction {Id} in Neo4j", transactionId);
 
-            // Create relationships with other transactions
-            await _neo4jDataAccess.CreateTransactionRelationshipsAsync(transactionId);
-            _logger.LogDebug("Successfully created relationships for transaction {Id}", transactionId);
-
-            // Find and log similar transactions for analytics
-            var similarTransactions = await _neo4jDataAccess.FindSimilarTransactionsAsync(transaction);
-            var similarCount = similarTransactions.Count();
-            
-            if (similarCount > 0)
-            {
-                _logger.LogInformation("Found {Count} similar transactions to {Id} in the graph", 
-                    similarCount, transaction.Id);
-            }
+            // Relationships are automatically created during upsert
+            _logger.LogDebug("Transaction {Id} stored with automatic relationship creation", transactionId);
 
             // Update transaction status to indicate Neo4j processing is complete
             var processedTransaction = transaction with 

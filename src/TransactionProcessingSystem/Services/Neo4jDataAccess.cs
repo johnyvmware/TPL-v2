@@ -46,31 +46,87 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
     public async Task<string> UpsertTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
         const string cypher = """
-            MERGE (t:Transaction {id: $id})
-            SET t.date = $date,
-                t.amount = $amount,
-                t.description = $description,
-                t.cleanDescription = $cleanDescription,
-                t.emailSubject = $emailSubject,
-                t.emailSnippet = $emailSnippet,
-                t.category = $category,
-                t.status = $status,
-                t.updatedAt = datetime()
-            ON CREATE SET t.createdAt = datetime()
-            RETURN t.id as transactionId
+            // Create or get the database version node
+            MERGE (dbVersion:DatabaseVersion {
+                version: $dbVersion,
+                createdDate: date($today)
+            })
+            
+            // Create or get the category node
+            MERGE (category:Category {
+                name: $category,
+                normalizedName: toLower(trim($category))
+            })
+            
+            // Create or get the date nodes (hierarchical: Year -> Month -> Day)
+            MERGE (year:Year {value: $year})
+            MERGE (month:Month {value: $month, name: $monthName, year: $year})
+            MERGE (day:Day {value: $day, date: date($transactionDate), year: $year, month: $month})
+            
+            // Create relationships between date nodes
+            MERGE (day)-[:IN_MONTH]->(month)
+            MERGE (month)-[:IN_YEAR]->(year)
+            
+            // Create or update the transaction node
+            MERGE (transaction:Transaction {id: $transactionId})
+            SET transaction.amount = $amount,
+                transaction.description = $description,
+                transaction.cleanDescription = $cleanDescription,
+                transaction.status = $status,
+                transaction.lastUpdated = datetime(),
+                transaction.hash = $transactionHash
+            
+            // Create relationships
+            MERGE (transaction)-[:BELONGS_TO_CATEGORY]->(category)
+            MERGE (transaction)-[:OCCURRED_ON]->(day)
+            MERGE (transaction)-[:STORED_IN_VERSION]->(dbVersion)
+            
+            // Add amount-based relationships for analytics
+            WITH transaction, category, day
+            CALL {
+                WITH transaction, category
+                MATCH (otherTransaction:Transaction)-[:BELONGS_TO_CATEGORY]->(category)
+                WHERE otherTransaction <> transaction 
+                  AND abs(otherTransaction.amount - transaction.amount) <= $amountThreshold
+                MERGE (transaction)-[:SIMILAR_AMOUNT {
+                    difference: abs(otherTransaction.amount - transaction.amount),
+                    createdAt: datetime()
+                }]->(otherTransaction)
+            }
+            
+            // Add temporal relationships (same day transactions)
+            WITH transaction, day
+            CALL {
+                WITH transaction, day
+                MATCH (otherTransaction:Transaction)-[:OCCURRED_ON]->(day)
+                WHERE otherTransaction <> transaction
+                MERGE (transaction)-[:SAME_DAY {createdAt: datetime()}]->(otherTransaction)
+            }
+            
+            RETURN transaction.id as transactionId, 
+                   category.name as categoryName,
+                   day.date as transactionDate,
+                   dbVersion.version as databaseVersion
             """;
 
+        var transactionDate = transaction.Date;
         var parameters = new
         {
-            id = transaction.Id,
-            date = transaction.Date.ToString("yyyy-MM-dd"),
+            transactionId = transaction.Id,
             amount = (double)transaction.Amount,
             description = transaction.Description,
-            cleanDescription = transaction.CleanDescription,
-            emailSubject = transaction.EmailSubject,
-            emailSnippet = transaction.EmailSnippet,
-            category = transaction.Category,
-            status = transaction.Status.ToString()
+            cleanDescription = transaction.CleanDescription ?? transaction.Description,
+            category = transaction.Category ?? "Unknown",
+            status = transaction.Status,
+            transactionDate = transactionDate.ToString("yyyy-MM-dd"),
+            year = transactionDate.Year,
+            month = transactionDate.Month,
+            monthName = transactionDate.ToString("MMMM"),
+            day = transactionDate.Day,
+            dbVersion = GetCurrentDatabaseVersion(),
+            today = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+            transactionHash = GenerateTransactionHash(transaction),
+            amountThreshold = 10.0 // Similar amounts within $10
         };
 
         try
@@ -81,13 +137,24 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
             
             var result = await session.ExecuteWriteAsync(async tx =>
             {
+                _logger.LogDebug("Upserting transaction {TransactionId} into graph database", transaction.Id);
+                
                 var cursor = await tx.RunAsync(cypher, parameters);
                 var record = await cursor.SingleAsync();
-                return record["transactionId"].As<string>();
+                
+                return new
+                {
+                    TransactionId = record["transactionId"].As<string>(),
+                    CategoryName = record["categoryName"].As<string>(),
+                    TransactionDate = record["transactionDate"].As<string>(),
+                    DatabaseVersion = record["databaseVersion"].As<string>()
+                };
             });
 
-            _logger.LogDebug("Successfully upserted transaction {TransactionId}", transaction.Id);
-            return result;
+            _logger.LogDebug("Successfully upserted transaction {TransactionId} with category {Category} on {Date} in database version {Version}", 
+                result.TransactionId, result.CategoryName, result.TransactionDate, result.DatabaseVersion);
+
+            return result.TransactionId;
         }
         catch (Exception ex)
         {
@@ -223,15 +290,65 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
     public async Task<IDictionary<string, object>> GetTransactionAnalyticsAsync(CancellationToken cancellationToken = default)
     {
         const string cypher = """
+            // Basic transaction statistics
             MATCH (t:Transaction)
-            RETURN 
-                count(t) as totalTransactions,
-                sum(t.amount) as totalAmount,
-                avg(t.amount) as averageAmount,
-                min(t.amount) as minAmount,
-                max(t.amount) as maxAmount,
-                collect(DISTINCT t.category) as categories,
-                collect(DISTINCT t.status) as statuses
+            WITH count(t) as totalTransactions,
+                 sum(t.amount) as totalAmount,
+                 avg(t.amount) as averageAmount,
+                 min(t.amount) as minAmount,
+                 max(t.amount) as maxAmount
+            
+            // Category analysis
+            OPTIONAL MATCH (t:Transaction)-[:BELONGS_TO_CATEGORY]->(c:Category)
+            WITH totalTransactions, totalAmount, averageAmount, minAmount, maxAmount,
+                 count(DISTINCT c) as totalCategories,
+                 collect(DISTINCT {name: c.name, count: size((c)<-[:BELONGS_TO_CATEGORY]-())}) as categoryBreakdown
+            
+            // Temporal analysis
+            OPTIONAL MATCH (t:Transaction)-[:OCCURRED_ON]->(d:Day)-[:IN_MONTH]->(m:Month)-[:IN_YEAR]->(y:Year)
+            WITH totalTransactions, totalAmount, averageAmount, minAmount, maxAmount,
+                 totalCategories, categoryBreakdown,
+                 count(DISTINCT y) as yearsSpan,
+                 count(DISTINCT m) as monthsSpan,
+                 count(DISTINCT d) as daysSpan
+            
+            // Relationship analysis
+            OPTIONAL MATCH ()-[sim:SIMILAR_AMOUNT]->()
+            OPTIONAL MATCH ()-[same:SAME_DAY]->()
+            WITH totalTransactions, totalAmount, averageAmount, minAmount, maxAmount,
+                 totalCategories, categoryBreakdown, yearsSpan, monthsSpan, daysSpan,
+                 count(DISTINCT sim) as similarAmountRelationships,
+                 count(DISTINCT same) as sameDayRelationships
+            
+            // Database version info
+            OPTIONAL MATCH (dv:DatabaseVersion)
+            
+            RETURN {
+                transactions: {
+                    total: totalTransactions,
+                    totalAmount: coalesce(totalAmount, 0.0),
+                    averageAmount: round(coalesce(averageAmount, 0.0) * 100) / 100,
+                    minAmount: coalesce(minAmount, 0.0),
+                    maxAmount: coalesce(maxAmount, 0.0)
+                },
+                categories: {
+                    total: totalCategories,
+                    breakdown: categoryBreakdown
+                },
+                temporal: {
+                    yearsSpan: yearsSpan,
+                    monthsSpan: monthsSpan,
+                    daysSpan: daysSpan
+                },
+                relationships: {
+                    similarAmount: similarAmountRelationships,
+                    sameDay: sameDayRelationships
+                },
+                database: {
+                    version: collect(DISTINCT dv.version)[0],
+                    generatedAt: datetime()
+                }
+            } as analytics
             """;
 
         try
@@ -245,22 +362,139 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
                 var cursor = await tx.RunAsync(cypher);
                 var record = await cursor.SingleAsync();
                 
+                var analytics = record["analytics"].As<IDictionary<string, object>>();
+                return analytics;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get enhanced transaction analytics");
+            
+            // Fallback to basic statistics if the enhanced query fails
+            return await GetBasicAnalyticsAsync();
+        }
+    }
+
+    private async Task<IDictionary<string, object>> GetBasicAnalyticsAsync()
+    {
+        const string basicCypher = """
+            MATCH (t:Transaction)
+            RETURN 
+                count(t) as totalTransactions,
+                sum(t.amount) as totalAmount,
+                avg(t.amount) as averageAmount,
+                min(t.amount) as minAmount,
+                max(t.amount) as maxAmount
+            """;
+
+        try
+        {
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Read));
+            
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var cursor = await tx.RunAsync(basicCypher);
+                var record = await cursor.SingleAsync();
+                
                 return new Dictionary<string, object>
                 {
-                    ["totalTransactions"] = record["totalTransactions"].As<long>(),
-                    ["totalAmount"] = record["totalAmount"].As<double?>() ?? 0.0,
-                    ["averageAmount"] = record["averageAmount"].As<double?>() ?? 0.0,
-                    ["minAmount"] = record["minAmount"].As<double?>() ?? 0.0,
-                    ["maxAmount"] = record["maxAmount"].As<double?>() ?? 0.0,
-                    ["categories"] = record["categories"].As<List<object>>().Where(x => x != null).ToList(),
-                    ["statuses"] = record["statuses"].As<List<object>>().Where(x => x != null).ToList()
+                    ["transactions"] = new Dictionary<string, object>
+                    {
+                        ["total"] = record["totalTransactions"].As<long>(),
+                        ["totalAmount"] = record["totalAmount"].As<double?>() ?? 0.0,
+                        ["averageAmount"] = Math.Round(record["averageAmount"].As<double?>() ?? 0.0, 2),
+                        ["minAmount"] = record["minAmount"].As<double?>() ?? 0.0,
+                        ["maxAmount"] = record["maxAmount"].As<double?>() ?? 0.0
+                    },
+                    ["categories"] = new Dictionary<string, object> { ["total"] = 0 },
+                    ["relationships"] = new Dictionary<string, object> { ["similarAmount"] = 0, ["sameDay"] = 0 },
+                    ["database"] = new Dictionary<string, object> { ["fallback"] = true }
                 };
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get transaction analytics");
+            _logger.LogError(ex, "Failed to get basic analytics");
             return new Dictionary<string, object>();
+        }
+    }
+
+    /// <summary>
+    /// Demonstrates the power of our graph database design with complex queries
+    /// </summary>
+    public async Task<IDictionary<string, object>> GetAdvancedTransactionPatternsAsync(CancellationToken cancellationToken = default)
+    {
+        const string cypher = """
+            // Find spending patterns by category over time
+            MATCH (t:Transaction)-[:BELONGS_TO_CATEGORY]->(c:Category),
+                  (t)-[:OCCURRED_ON]->(d:Day)-[:IN_MONTH]->(m:Month)-[:IN_YEAR]->(y:Year)
+            WITH c.name as category,
+                 y.value as year,
+                 m.value as month,
+                 sum(t.amount) as monthlyTotal,
+                 count(t) as transactionCount,
+                 avg(t.amount) as avgTransactionAmount
+            
+            // Find categories with consistent spending patterns
+            WITH category, year, month, monthlyTotal, transactionCount, avgTransactionAmount,
+                 collect({month: month, total: monthlyTotal, count: transactionCount}) as monthlyData
+            
+            // Find similar amount clusters
+            MATCH (t1:Transaction)-[sim:SIMILAR_AMOUNT]->(t2:Transaction)
+            WITH category, year, monthlyData,
+                 count(DISTINCT sim) as similarAmountConnections
+            
+            // Find temporal spending clusters (same day transactions)
+            MATCH (t:Transaction)-[:SAME_DAY]->(other:Transaction)
+            WHERE t <> other
+            WITH category, year, monthlyData, similarAmountConnections,
+                 count(DISTINCT t) as transactionsWithSameDayActivity
+            
+            // Database version and integrity info
+            MATCH (dv:DatabaseVersion)
+            
+            RETURN {
+                spendingPatterns: collect({
+                    category: category,
+                    year: year,
+                    monthlyBreakdown: monthlyData,
+                    similarAmountConnections: similarAmountConnections,
+                    sameDayActivityTransactions: transactionsWithSameDayActivity
+                }),
+                graphIntegrity: {
+                    databaseVersion: dv.version,
+                    features: dv.features,
+                    analysisDate: datetime(),
+                    description: dv.description
+                }
+            } as patterns
+            """;
+
+        try
+        {
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Read));
+            
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var cursor = await tx.RunAsync(cypher);
+                var record = await cursor.SingleAsync();
+                
+                var patterns = record["patterns"].As<IDictionary<string, object>>();
+                return patterns;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get advanced transaction patterns");
+            return new Dictionary<string, object>
+            {
+                ["error"] = "Advanced pattern analysis unavailable",
+                ["message"] = ex.Message
+            };
         }
     }
 
@@ -384,6 +618,124 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
         }
     }
 
+    public async Task InitializeDatabaseAsync(CancellationToken cancellationToken = default)
+    {
+        var constraints = new[]
+        {
+            "CREATE CONSTRAINT transaction_id_unique IF NOT EXISTS FOR (t:Transaction) REQUIRE t.id IS UNIQUE",
+            "CREATE CONSTRAINT category_name_unique IF NOT EXISTS FOR (c:Category) REQUIRE c.name IS UNIQUE",
+            "CREATE CONSTRAINT year_value_unique IF NOT EXISTS FOR (y:Year) REQUIRE y.value IS UNIQUE",
+            "CREATE CONSTRAINT month_composite_unique IF NOT EXISTS FOR (m:Month) REQUIRE (m.value, m.year) IS UNIQUE",
+            "CREATE CONSTRAINT day_date_unique IF NOT EXISTS FOR (d:Day) REQUIRE d.date IS UNIQUE",
+            "CREATE CONSTRAINT db_version_unique IF NOT EXISTS FOR (dv:DatabaseVersion) REQUIRE dv.version IS UNIQUE"
+        };
+
+        var indexes = new[]
+        {
+            "CREATE INDEX transaction_amount_idx IF NOT EXISTS FOR (t:Transaction) ON (t.amount)",
+            "CREATE INDEX transaction_status_idx IF NOT EXISTS FOR (t:Transaction) ON (t.status)",
+            "CREATE INDEX transaction_date_idx IF NOT EXISTS FOR (t:Transaction) ON (t.lastUpdated)",
+            "CREATE INDEX category_normalized_idx IF NOT EXISTS FOR (c:Category) ON (c.normalizedName)",
+            "CREATE INDEX day_date_idx IF NOT EXISTS FOR (d:Day) ON (d.date)",
+            "CREATE INDEX year_value_idx IF NOT EXISTS FOR (y:Year) ON (y.value)",
+            "CREATE TEXT INDEX transaction_description_text_idx IF NOT EXISTS FOR (t:Transaction) ON (t.description)",
+            "CREATE TEXT INDEX transaction_clean_description_text_idx IF NOT EXISTS FOR (t:Transaction) ON (t.cleanDescription)"
+        };
+
+        try
+        {
+            await using var session = _driver.AsyncSession(o => o
+                .WithDatabase(_settings.Database)
+                .WithDefaultAccessMode(AccessMode.Write));
+            
+            // Create constraints first
+            foreach (var constraint in constraints)
+            {
+                try
+                {
+                    await session.ExecuteWriteAsync(async tx =>
+                    {
+                        await tx.RunAsync(constraint);
+                    });
+                    _logger.LogDebug("Created constraint: {Constraint}", constraint);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to create constraint: {Constraint}", constraint);
+                }
+            }
+
+            // Create indexes
+            foreach (var index in indexes)
+            {
+                try
+                {
+                    await session.ExecuteWriteAsync(async tx =>
+                    {
+                        await tx.RunAsync(index);
+                    });
+                    _logger.LogDebug("Created index: {Index}", index);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to create index: {Index}", index);
+                }
+            }
+
+            // Initialize database version
+            await CreateDatabaseVersionAsync(session);
+
+            _logger.LogInformation("Neo4j database schema initialized successfully with {ConstraintCount} constraints and {IndexCount} indexes", 
+                constraints.Length, indexes.Length);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize Neo4j database schema");
+            throw;
+        }
+    }
+
+    private async Task CreateDatabaseVersionAsync(IAsyncSession session)
+    {
+        const string cypher = """
+            MERGE (dv:DatabaseVersion {version: $version})
+            SET dv.createdDate = date(),
+                dv.description = $description,
+                dv.features = $features
+            RETURN dv.version as version
+            """;
+
+        var currentVersion = GetCurrentDatabaseVersion();
+        var parameters = new
+        {
+            version = currentVersion,
+            description = "Transaction Processing System Graph Database",
+            features = new[] { "Hierarchical_Dates", "Category_Relationships", "Amount_Similarity", "Temporal_Links", "Version_Tracking" }
+        };
+
+        await session.ExecuteWriteAsync(async tx =>
+        {
+            await tx.RunAsync(cypher, parameters);
+        });
+
+        _logger.LogInformation("Database version {Version} initialized", currentVersion);
+    }
+
+    private string GetCurrentDatabaseVersion()
+    {
+        // Version based on current date and feature set
+        var version = $"v2.0.{DateTime.UtcNow:yyyyMMdd}";
+        return version;
+    }
+
+    private string GenerateTransactionHash(Transaction transaction)
+    {
+        // Generate a hash for duplicate detection and integrity checking
+        var hashInput = $"{transaction.Id}|{transaction.Amount}|{transaction.Date:yyyy-MM-dd}|{transaction.Description}";
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(hashInput));
+        return Convert.ToBase64String(hashBytes)[..12]; // First 12 characters for readability
+    }
 
 
     public async ValueTask DisposeAsync()

@@ -14,7 +14,12 @@ public interface INeo4jDataAccess
     Task<bool> VerifyConnectivityAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates or updates a transaction node in the graph
+    /// Initializes database schema with constraints, indexes, and versioning
+    /// </summary>
+    Task InitializeDatabaseAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates or updates a transaction node in the graph with proper relationships
     /// </summary>
     Task<string> UpsertTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default);
 
@@ -24,27 +29,15 @@ public interface INeo4jDataAccess
     Task CreateTransactionRelationshipsAsync(string transactionId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Finds similar transactions based on description, amount, and other criteria
-    /// </summary>
-    Task<IEnumerable<Transaction>> FindSimilarTransactionsAsync(Transaction transaction, double similarityThreshold = 0.8, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets transaction patterns and analytics
+    /// Retrieves transaction analytics from the graph database
     /// </summary>
     Task<IDictionary<string, object>> GetTransactionAnalyticsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Executes a custom Cypher query and returns results
+    /// Executes custom Cypher queries
     /// </summary>
-    Task<IEnumerable<IDictionary<string, object>>> ExecuteQueryAsync(string cypher, object? parameters = null, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Creates indexes for performance optimization
-    /// </summary>
-    Task CreateIndexesAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets graph statistics and health information
-    /// </summary>
-    Task<IDictionary<string, object>> GetGraphStatsAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<IDictionary<string, object>>> ExecuteQueryAsync(
+        string cypher, 
+        object? parameters = null, 
+        CancellationToken cancellationToken = default);
 }

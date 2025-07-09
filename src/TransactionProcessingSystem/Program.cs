@@ -230,10 +230,10 @@ public class Program
                 return;
             }
 
-            // Create indexes for better performance
-            await neo4jDataAccess.CreateIndexesAsync();
+            // Initialize database schema with constraints, indexes, and versioning
+            await neo4jDataAccess.InitializeDatabaseAsync();
             
-            logger.LogInformation("Neo4j database initialized successfully");
+            logger.LogInformation("Neo4j database schema initialized successfully");
         }
         catch (Exception ex)
         {

@@ -4,6 +4,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
+using NUnit.Framework;
+using System.Linq;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Services;
@@ -17,15 +19,17 @@ namespace TransactionProcessingSystem.Tests.IntegrationTests;
 /// NOTE: These tests require a running Neo4j instance or can be modified to use Neo4j TestContainers
 /// For CI/CD, consider using Neo4j Docker container or embedded Neo4j
 /// </summary>
-[Collection("Neo4j Integration Tests")]
-public class Neo4jIntegrationTests : IAsyncLifetime
+[TestFixture]
+[NonParallelizable]
+public class Neo4jIntegrationTests
 {
-    private readonly IHost _host;
-    private readonly INeo4jDataAccess _dataAccess;
-    private readonly IDriver _driver;
-    private readonly string _testDatabase;
+    private IHost _host = null!;
+    private INeo4jDataAccess _dataAccess = null!;
+    private IDriver _driver = null!;
+    private string _testDatabase = null!;
 
-    public Neo4jIntegrationTests()
+    [OneTimeSetUp]
+    public async Task InitializeAsync()
     {
         _testDatabase = $"test_{Guid.NewGuid():N}";
 
@@ -43,15 +47,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
                     ConnectionTimeoutSeconds = 30
                 };
 
-                services.Configure<Neo4jSettings>(opts =>
-                {
-                    opts.ConnectionUri = neo4jSettings.ConnectionUri;
-                    opts.Username = neo4jSettings.Username;
-                    opts.Password = neo4jSettings.Password;
-                    opts.Database = neo4jSettings.Database;
-                    opts.MaxConnectionPoolSize = neo4jSettings.MaxConnectionPoolSize;
-                    opts.ConnectionTimeoutSeconds = neo4jSettings.ConnectionTimeoutSeconds;
-                });
+                services.AddSingleton(Options.Create(neo4jSettings));
 
                 services.AddSingleton<IDriver>(provider =>
                 {
@@ -69,10 +65,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         _host = builder.Build();
         _dataAccess = _host.Services.GetRequiredService<INeo4jDataAccess>();
         _driver = _host.Services.GetRequiredService<IDriver>();
-    }
 
-    public async Task InitializeAsync()
-    {
         try
         {
             // Verify connectivity before running tests
@@ -96,6 +89,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         }
     }
 
+    [OneTimeTearDown]
     public async Task DisposeAsync()
     {
         try
@@ -119,7 +113,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Test]
     public async Task VerifyConnectivityAsync_ShouldConnectToRealDatabase()
     {
         // Act
@@ -129,7 +123,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         isConnected.Should().BeTrue("integration tests require a working Neo4j connection");
     }
 
-    [Fact]
+    [Test]
     public async Task UpsertTransactionAsync_ShouldPersistTransactionInDatabase_WithModernPatterns()
     {
         // Arrange
@@ -149,7 +143,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         storedTransaction.Description.Should().Be(transaction.Description);
     }
 
-    [Fact]
+    [Test]
     public async Task UpsertTransactionsAsync_ShouldStreamMultipleTransactions_UsingIAsyncEnumerable()
     {
         // Arrange
@@ -174,7 +168,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Test]
     public async Task FindSimilarTransactionsAsync_ShouldFindActualSimilarTransactions_WithGraphQueries()
     {
         // Arrange
@@ -204,7 +198,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         similarTransactions.Should().NotContain(t => t.Id == baseTransaction.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task GetTransactionAnalyticsAsync_ShouldReturnRealAnalytics_WithStrongTyping()
     {
         // Arrange
@@ -230,7 +224,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         analytics.DateRange.Latest.Should().NotBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteQueryAsync_ShouldStreamCustomQueryResults()
     {
         // Arrange
@@ -254,7 +248,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         results[0]["id"].Should().Be(transaction.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task GetGraphStatisticsAsync_ShouldReturnActualDatabaseStatistics()
     {
         // Arrange
@@ -281,7 +275,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         statistics.Should().AllSatisfy(s => s.Count.Should().BeGreaterThan(0));
     }
 
-    [Fact]
+    [Test]
     public async Task DatabaseSchema_ShouldCreateProperConstraintsAndIndexes()
     {
         // Act
@@ -298,7 +292,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         indexes.Should().Contain(i => i.Contains("transaction_date_idx"));
     }
 
-    [Fact]
+    [Test]
     public async Task TransactionGraph_ShouldCreateProperRelationships()
     {
         // Arrange
@@ -314,7 +308,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
         relationshipCount.Should().BeGreaterThan(0, "transactions with same category should have relationships");
     }
 
-    [Fact]
+    [Test]
     public async Task ConcurrentOperations_ShouldHandleMultipleStreams_WithModernAsyncPatterns()
     {
         // Arrange
@@ -447,15 +441,4 @@ public class Neo4jIntegrationTests : IAsyncLifetime
 
         return 0;
     }
-}
-
-/// <summary>
-/// Collection definition to ensure integration tests run sequentially
-/// </summary>
-[CollectionDefinition("Neo4j Integration Tests", DisableParallelization = true)]
-public class Neo4jIntegrationTestCollection
-{
-    // This class has no code, and is never created. Its purpose is simply
-    // to be the place to apply [CollectionDefinition] and all the
-    // ICollectionFixture<> interfaces.
-}
+} 

@@ -12,16 +12,8 @@ This repository uses GitHub Actions for continuous integration and validation.
 
 ### 🔍 Pull Request Validation (`pr-validation.yml`)
 **Triggers:** Pull request events targeting `main` branch (opened, synchronized, reopened, ready_for_review)
-- Validates non-draft pull requests only
 - **Build, Test & Quality**: Solution build, test execution, coverage reporting, and code formatting
 - **Security Scan**: Vulnerability assessment for dependencies and secret detection
-
-### ⚡ Commit Validation (`commit-validation.yml`)
-**Triggers:** Every commit to `main` branch
-- Quick compilation check
-- Basic test execution (continues on error)
-- Commit message format validation (conventional commits)
-- Fast feedback for development workflow
 
 ### 🤖 Dependabot (`dependabot.yml`)
 **Schedule:** Weekly on Mondays at 9:00 AM
@@ -29,10 +21,7 @@ This repository uses GitHub Actions for continuous integration and validation.
 - Updates GitHub Actions versions
 - Groups related dependencies for cleaner PRs
 
-## Consistent Job Structure
-
-Both CI and PR validation workflows now use the same organized job structure:
-
+##  Job Structure
 ### 🏗️ Job 1: Build, Test & Quality
 **Purpose:** Core development workflow validation
 - Solution restoration and compilation
@@ -48,35 +37,11 @@ Both CI and PR validation workflows now use the same organized job structure:
 - Dependency security assessment
 - Security scan logs for audit trails
 
-### 📦 Job 3: Build Artifacts (CI Only)
+### 📦 Job 3: Build Artifacts
 **Purpose:** Production artifact generation
 - Application publishing for deployment
 - Release artifact upload
 - Only runs on main branch after other jobs succeed
-
-## Aligned Quality Checks
-
-Both workflows run identical quality checks in the same logical order:
-
-### ✅ Build & Test
-- Solution restoration and compilation
-- Unit test execution with coverage collection
-- Test result reporting and artifact upload
-- Code coverage reporting to Codecov
-
-### ✅ Code Quality
-- Code formatting validation (`dotnet format --verify-no-changes`)
-- Consistent code style enforcement
-
-### ✅ Security Scanning
-- NuGet package vulnerability scanning
-- Secret detection using Gitleaks
-- Dependency security assessment
-
-### ✅ Artifacts & Reporting
-- Test result artifacts for debugging
-- Coverage reports for quality tracking
-- Security scan logs for audit trails
 
 ## Workflow Status
 

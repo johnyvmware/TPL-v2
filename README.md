@@ -1,73 +1,67 @@
-# TPL Dataflow Transaction Processing System
+# Transaction Processing System
 
-[![CI/CD Pipeline](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml)
-[![PR Validation](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml)
-[![Release & Deploy](https://github.com/johnyvmware/TPL-v2/actions/workflows/release.yml/badge.svg)](https://github.com/johnyvmware/TPL-v2/actions/workflows/release.yml)
-[![codecov](https://codecov.io/gh/johnyvmware/TPL-v2/branch/main/graph/badge.svg)](https://codecov.io/gh/johnyvmware/TPL-v2)
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
+[![NUnit](https://img.shields.io/badge/Testing-NUnit-green.svg)](https://nunit.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **Production-Ready Transaction Processing System** with comprehensive CI/CD pipeline, automated testing, security scanning, and multi-platform deployments.
+> **Modern Transaction Processing System** with TPL Dataflow pipeline, Neo4j graph database integration, and comprehensive testing.
 
-## 🚀 CI/CD Status
+## 🚀 Quick Start
 
-### Workflow Status
-| Workflow | Status | Description |
-|----------|--------|-------------|
-| **CI/CD Pipeline** | ![CI Status](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml/badge.svg) | Continuous integration with build, test, and quality checks |
-| **PR Validation** | ![PR Status](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml/badge.svg) | Pull request validation and code quality enforcement |
-| **Release & Deploy** | ![Release Status](https://github.com/johnyvmware/TPL-v2/actions/workflows/release.yml/badge.svg) | Automated releases and multi-environment deployments |
-| **Dependency Updates** | ![Dependabot Status](https://img.shields.io/badge/dependabot-enabled-brightgreen.svg) | Automated dependency updates and security patches |
+### Prerequisites
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Neo4j Database](https://neo4j.com/download/) (optional for full functionality)
 
-### Quality Metrics
-| Metric | Status | Description |
-|--------|--------|-------------|
-| **Code Coverage** | ![Code Coverage](https://codecov.io/gh/johnyvmware/TPL-v2/branch/main/graph/badge.svg) | Test coverage percentage and trends |
-| **Security Scan** | ![Security](https://img.shields.io/badge/security-scanning-brightgreen.svg) | Automated vulnerability detection |
-| **Code Quality** | ![Quality](https://img.shields.io/badge/code-quality-enforced-brightgreen.svg) | Static analysis and formatting checks |
-| **Build Status** | ![Build](https://img.shields.io/badge/build-passing-brightgreen.svg) | Latest build status on main branch |
+### Build and Run
+```bash
+# Clone the repository
+git clone https://github.com/johnyvmware/TPL-v2.git
+cd TPL-v2
 
-### Pipeline Features
-- ✅ **Automated Testing**: Unit tests, integration tests, and coverage reporting
-- ✅ **Security Scanning**: Dependency vulnerability checks and secret detection
-- ✅ **Code Quality**: Format validation and static analysis
-- ✅ **Multi-Platform**: Builds for Windows, Linux, and macOS
-- ✅ **Artifact Management**: Automated artifact upload and retention
-- ✅ **Release Automation**: Tag-based releases with changelog generation
-- ✅ **Feature Branch Workflow**: CI/CD validation on feature branches via PRs
+# Build the solution
+dotnet build
 
-## 🌿 Branching Strategy
+# Run tests
+dotnet test
 
-This project follows a **main branch workflow** with feature branches:
+# Run the application
+dotnet run --project src/TransactionProcessingSystem
+```
 
-### Branch Structure
-- **`main`**: Production-ready code, protected branch
-- **`feature/*`**: Feature development branches (e.g., `feature/user-authentication`)
+## 📁 Project Structure
 
-### Development Workflow
-1. **Create feature branch** from `main`
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-2. **Develop and test** your feature locally
-3. **Push and create PR** to `main`
-4. **CI/CD validation** runs automatically on PR
-5. **Code review** and approval required
-6. **Merge to main** triggers production deployment
-
-### CI/CD Flow
-- **Feature Branches**: PR validation and testing
-- **Main Branch**: Full CI/CD pipeline with artifact generation
-- **Release Tags**: Production deployment trigger
+```
+TPL-v2/
+├── src/
+│   └── TransactionProcessingSystem/           # Main application
+│       ├── Components/                        # Processing components
+│       ├── Models/                           # Data models
+│       ├── Services/                         # Business services
+│       ├── Configuration/                    # App configuration
+│       └── Pipeline/                         # TPL Dataflow pipeline
+├── tests/
+│   └── TransactionProcessingSystem.Tests/    # Consolidated test project
+│       ├── UnitTests/                        # Unit tests
+│       └── IntegrationTests/                 # Integration tests
+└── TPL-v2.sln                              # Solution file
+```
 
 ## 🏗️ Architecture
 
-5-stage processing pipeline using TPL Dataflow:
+Modern 5-stage processing pipeline using TPL Dataflow:
+
 ```
 TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer → CsvExporter
 ```
 
-## 📦 Components
+### Key Features
+- **Asynchronous Processing**: Leverages TPL Dataflow for high-performance parallel processing
+- **Graph Database**: Neo4j integration for advanced transaction analytics and relationship mapping
+- **AI Categorization**: OpenAI GPT-4 integration for intelligent transaction categorization
+- **Email Correlation**: Microsoft Graph API integration for transaction-email matching
+- **Robust Testing**: Comprehensive test suite with NUnit framework
+
+## 📦 Core Components
 
 ### TransactionFetcher
 - HTTP REST API client with retry logic (3 attempts, exponential backoff)
@@ -76,8 +70,8 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
 
 ### TransactionProcessor
 - Text normalization using regex patterns
-- Date/amount formatting
-- Title case conversion
+- Date/amount formatting and validation
+- Title case conversion and data cleansing
 
 ### EmailEnricher
 - Microsoft Graph SDK integration using Azure Identity
@@ -104,7 +98,15 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
 - Thread-safe concurrent processing
 - Automatic flush every 30 seconds
 
+### Neo4jProcessor
+- Graph database integration for advanced analytics
+- Transaction relationship mapping
+- Real-time similarity detection
+- IAsyncEnumerable streaming for large datasets
+
 ## 🔧 Configuration
+
+Create an `appsettings.json` file:
 
 ```json
 {
@@ -119,6 +121,14 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
     "ClientSecret": "your-azure-app-client-secret",
     "TenantId": "your-azure-tenant-id",
     "EmailSearchDays": 2
+  },
+  "Neo4j": {
+    "ConnectionUri": "neo4j://localhost:7687",
+    "Username": "neo4j",
+    "Password": "your-password",
+    "Database": "neo4j",
+    "MaxConnectionPoolSize": 10,
+    "ConnectionTimeoutSeconds": 30
   },
   "TransactionApi": {
     "BaseUrl": "https://api.yourbank.com",
@@ -137,117 +147,65 @@ TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer �
 }
 ```
 
-## 🚀 Quick Start
+## 🧪 Testing
 
-### Prerequisites
+The project uses **NUnit** as the testing framework with comprehensive test coverage:
 
-- .NET 8.0 SDK
-- Azure App Registration (Microsoft Graph access)
-- OpenAI API key
-- Internet connection
+### Test Structure
+```
+tests/TransactionProcessingSystem.Tests/
+├── UnitTests/
+│   └── BasicTests.cs                    # Core model and logic tests
+├── IntegrationTests/                    # End-to-end integration tests
+└── SimpleTests.cs                       # Basic functionality tests
+```
 
-### Installation
+### Running Tests
+```bash
+# Run all tests
+dotnet test
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/johnyvmware/TPL-v2.git
-   cd TPL-v2
-   ```
+# Run tests with verbose output
+dotnet test --verbosity normal
 
-2. **Restore dependencies**
-   ```bash
-   dotnet restore
-   ```
+# Run tests with coverage (if configured)
+dotnet test --collect:"XPlat Code Coverage"
+```
 
-3. **Build the application**
-   ```bash
-   dotnet build --configuration Release
-   ```
+### Test Features
+- ✅ **Unit Tests**: Core business logic and model validation
+- ✅ **Integration Tests**: Database and external service integration
+- ✅ **Mocking**: Moq framework for dependency isolation
+- ✅ **Assertions**: FluentAssertions for readable test assertions
+- ✅ **Async Testing**: Full support for async/await patterns
 
-4. **Run tests**
-   ```bash
-   dotnet test --configuration Release
-   ```
+## 📋 Output
 
-5. **Run the application**
-   ```bash
-   dotnet run --project src/TransactionProcessingSystem
-   ```
+The system generates CSV files with the format: `transactions_yyyyMMdd_HHmmss.csv`
 
-## 🏭 Production Deployment
-
-### Automated Deployments
-
-The system includes a comprehensive CI/CD pipeline with:
-
-- **Continuous Integration**: Automated build, test, and quality checks on every commit
-- **Security Scanning**: Vulnerability detection and dependency auditing
-- **Multi-Platform Builds**: Linux, Windows, and macOS artifacts
-- **Production Releases**: Protected production deployments with approval gates
-
-### Environment Configuration
-
-| Environment | Branch | Deployment Trigger | URL |
-|-------------|--------|-------------------|-----|
-| **Development** | `feature/*` | Manual | Local development |
-| **Production** | `main` | Release tags | `https://app.example.com` |
-
-### Release Process
-
-1. **Create a release tag**:
-   ```bash
-   git tag -a v1.0.0 -m "Release version 1.0.0"
-   git push origin v1.0.0
-   ```
-
-2. **Automated pipeline**:
-   - Validates the release
-   - Builds multi-platform artifacts
-   - Creates GitHub release with changelog
-   - Deploys to production
+**Columns**: Id, Date, Amount, Description, CleanDescription, EmailSubject, EmailSnippet, Category, Status
 
 ## 🔒 Security & Quality
 
 ### Security Features
-
-- ✅ **Vulnerability Scanning**: Automated dependency vulnerability checks
-- ✅ **Code Analysis**: Static code analysis with .NET analyzers
-- ✅ **Dependency Review**: Automated review of new dependencies in PRs
-- ✅ **Secret Management**: Environment-based configuration for sensitive data
+- ✅ **Secure Configuration**: Environment-based secrets management
 - ✅ **HTTPS Enforcement**: Secure communication channels
+- ✅ **Input Validation**: Comprehensive data validation
+- ✅ **Error Handling**: Robust exception handling and logging
 
 ### Quality Assurance
-
-- ✅ **Unit Tests**: Comprehensive test coverage
-- ✅ **Integration Tests**: End-to-end testing
-- ✅ **Code Formatting**: Enforced code style with `dotnet format`
-- ✅ **Conventional Commits**: Structured commit message validation
-- ✅ **Pull Request Reviews**: Required code reviews before merging
+- ✅ **Comprehensive Testing**: Unit and integration test coverage
+- ✅ **Code Standards**: Consistent coding style and conventions
+- ✅ **Static Analysis**: Built-in .NET analyzers
+- ✅ **Modern C# Features**: Leverages latest C# language features
 
 ## 📊 Monitoring & Observability
 
 ### Built-in Logging
-
-The application includes structured logging with:
-
 - **Console Logging**: Development and container environments
-- **File Logging**: Production file-based logging
 - **Structured Logs**: JSON formatted logs for easy parsing
 - **Performance Metrics**: Transaction processing times and throughput
-
-### Health Checks
-
-Production deployments include:
-
-- **Startup Validation**: Application startup health verification
-- **Dependency Checks**: External service connectivity validation
-- **Performance Monitoring**: Response time and resource usage tracking
-
-## 📋 Output
-
-CSV files with format: `transactions_yyyyMMdd_HHmmss.csv`
-
-**Columns**: Id, Date, Amount, Description, CleanDescription, EmailSubject, EmailSnippet, Category, Status
+- **Error Tracking**: Comprehensive error reporting and stack traces
 
 ## 🤝 Contributing
 
@@ -256,54 +214,27 @@ CSV files with format: `transactions_yyyyMMdd_HHmmss.csv`
 3. Make your changes following the coding standards
 4. Add tests for new functionality
 5. Ensure all tests pass (`dotnet test`)
-6. Commit using conventional commits (`git commit -m 'feat: add amazing feature'`)
+6. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 7. Push to the branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
 
-### Development Workflow
-
-```bash
-# Setup development environment
-make setup-dev
-
-# Run tests with coverage
-make test-coverage
-
-# Format code
-make format
-
-# Run security scan
-make security-scan
-
-# Build for production
-make build-release
-```
-
-## 📈 Performance
-
-- **Throughput**: Processes 1000+ transactions/minute
-- **Memory Usage**: Optimized buffering with configurable memory footprint
-- **Scalability**: Horizontal scaling support through configuration
-- **Fault Tolerance**: Robust error handling and retry mechanisms
-
 ## 🔧 Development Tools
 
-- **IDE**: Visual Studio 2022, VS Code, or JetBrains Rider
-- **Package Management**: NuGet with automated dependency updates
-- **Testing**: xUnit with FluentAssertions for readable tests
-- **Debugging**: Comprehensive logging and error reporting
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- **Framework**: .NET 8.0 with latest C# features
+- **Testing**: NUnit with FluentAssertions for readable tests
+- **Mocking**: Moq for dependency isolation
+- **Database**: Neo4j for graph-based analytics
+- **Package Management**: NuGet with modern package references
+- **IDE Support**: Visual Studio, VS Code, Rider compatible
 
 ## 🆘 Support
 
-- 📖 **Documentation**: [Wiki](https://github.com/johnyvmware/TPL-v2/wiki)
-- 🐛 **Bug Reports**: [Issues](https://github.com/johnyvmware/TPL-v2/issues)
-- 💡 **Feature Requests**: [Discussions](https://github.com/johnyvmware/TPL-v2/discussions)
-- 📧 **Contact**: [email@example.com](mailto:email@example.com)
+For questions, issues, or contributions:
+
+- 🐛 **Bug Reports**: Create an issue with detailed reproduction steps
+- 💡 **Feature Requests**: Open a discussion for new feature ideas
+- 📖 **Documentation**: Check the inline code documentation and XML comments
 
 ---
 
-*Made with ❤️ by the Transaction Processing Team*
+Built with .NET 8.0 and modern C# features ⚡

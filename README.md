@@ -237,4 +237,4 @@ For questions, issues, or contributions:
 
 ---
 
-Built with .NET 8.0 and modern C# features ⚡
+Built with ❤️ by AI

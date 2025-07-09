@@ -25,16 +25,16 @@ public sealed class Neo4jDataAccess(
         try
         {
             logger.LogDebug("Verifying Neo4j connectivity");
-            
+
             await using var session = driver.AsyncSession(ConfigureSession());
-                
+
             var result = await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync("RETURN 1 AS test").ConfigureAwait(false);
                 var record = await cursor.SingleAsync().ConfigureAwait(false);
                 return record["test"].As<int>();
             }, ConfigureTransaction("connectivity_check")).ConfigureAwait(false);
-                
+
             logger.LogInformation("Neo4j connectivity verified successfully");
             return result == 1;
         }
@@ -47,7 +47,7 @@ public sealed class Neo4jDataAccess(
 
     public async ValueTask InitializeDatabaseAsync(CancellationToken cancellationToken = default)
     {
-        string[] constraints = 
+        string[] constraints =
         [
             "CREATE CONSTRAINT transaction_id_unique IF NOT EXISTS FOR (t:Transaction) REQUIRE t.id IS UNIQUE",
             "CREATE CONSTRAINT category_name_unique IF NOT EXISTS FOR (c:Category) REQUIRE c.name IS UNIQUE",
@@ -57,7 +57,7 @@ public sealed class Neo4jDataAccess(
             "CREATE CONSTRAINT db_version_unique IF NOT EXISTS FOR (v:DatabaseVersion) REQUIRE v.version IS UNIQUE"
         ];
 
-        string[] indexes = 
+        string[] indexes =
         [
             "CREATE INDEX transaction_amount_idx IF NOT EXISTS FOR (t:Transaction) ON (t.amount)",
             "CREATE INDEX transaction_date_idx IF NOT EXISTS FOR (t:Transaction) ON (t.date)",
@@ -206,7 +206,7 @@ public sealed class Neo4jDataAccess(
         try
         {
             await using var session = driver.AsyncSession(ConfigureSession(AccessMode.Write));
-            
+
             var result = await session.ExecuteWriteAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(cypher, parameters).ConfigureAwait(false);
@@ -225,7 +225,7 @@ public sealed class Neo4jDataAccess(
     }
 
     public async IAsyncEnumerable<TransactionResult> UpsertTransactionsAsync(
-        IAsyncEnumerable<Transaction> transactions, 
+        IAsyncEnumerable<Transaction> transactions,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await using var session = driver.AsyncSession(ConfigureSession(AccessMode.Write));
@@ -250,7 +250,7 @@ public sealed class Neo4jDataAccess(
     }
 
     public async IAsyncEnumerable<Transaction> FindSimilarTransactionsAsync(
-        Transaction transaction, 
+        Transaction transaction,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         const string cypher = """
@@ -291,7 +291,7 @@ public sealed class Neo4jDataAccess(
                     Description = record.TryGetValue("description", out var desc) ? desc?.ToString() ?? "" : "",
                     CleanDescription = record.TryGetValue("cleanDescription", out var cleanDesc) ? cleanDesc?.ToString() : null,
                     Category = record.TryGetValue("category", out var cat) ? cat?.ToString() : null,
-                    Status = Enum.TryParse<ProcessingStatus>(record.TryGetValue("status", out var status) ? status?.ToString() : null, out var statusValue) 
+                    Status = Enum.TryParse<ProcessingStatus>(record.TryGetValue("status", out var status) ? status?.ToString() : null, out var statusValue)
                         ? statusValue : ProcessingStatus.Processed
                 }
                 : throw new InvalidOperationException($"Invalid transaction record for {transaction.Id}");
@@ -338,13 +338,13 @@ public sealed class Neo4jDataAccess(
         try
         {
             await using var session = driver.AsyncSession(ConfigureSession());
-            
+
             return await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(cypher).ConfigureAwait(false);
                 var record = await cursor.SingleAsync().ConfigureAwait(false);
                 var analyticsData = record["analytics"].As<IDictionary<string, object>>();
-                
+
                 return MapToTransactionAnalytics(analyticsData);
             }, ConfigureTransaction("get_analytics")).ConfigureAwait(false);
         }
@@ -361,7 +361,7 @@ public sealed class Neo4jDataAccess(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await using var session = driver.AsyncSession(ConfigureSession());
-        
+
         await foreach (var record in ExecuteQueryInternalAsync(session, cypher, parameters, cancellationToken))
         {
             yield return record;
@@ -406,7 +406,7 @@ public sealed class Neo4jDataAccess(
         await foreach (var relRecord in ExecuteQueryInternalAsync(session, relationshipStatsQuery, null, cancellationToken))
         {
             yield return new GraphStatistic(
-                "Relationship", 
+                "Relationship",
                 relRecord.TryGetValue("relationshipType", out var relType) ? relType?.ToString() ?? "Unknown" : "Unknown",
                 Convert.ToInt64(relRecord.TryGetValue("count", out var count) ? count : 0));
         }
@@ -424,12 +424,12 @@ public sealed class Neo4jDataAccess(
         {
             var cursor = await tx.RunAsync(cypher, parameters).ConfigureAwait(false);
             var records = new List<IDictionary<string, object>>();
-            
+
             await foreach (var record in cursor.ToAsyncEnumerable(cancellationToken))
             {
                 records.Add(record.Keys.ToDictionary(key => key, key => record[key].As<object>()));
             }
-            
+
             return records;
         }, ConfigureTransaction("custom_query")).ConfigureAwait(false);
 
@@ -541,12 +541,12 @@ public sealed class Neo4jDataAccess(
         try
         {
             await using var session = driver.AsyncSession(ConfigureSession());
-            
+
             return await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(basicCypher).ConfigureAwait(false);
                 var record = await cursor.SingleAsync().ConfigureAwait(false);
-                
+
                 return new TransactionAnalytics
                 {
                     TotalTransactions = record["totalTransactions"].As<long>(),

@@ -336,14 +336,14 @@ public class Neo4jProcessorTests
 
         _mockDataAccess
             .Setup(d => d.UpsertTransactionsAsync(It.IsAny<IAsyncEnumerable<Transaction>>(), It.IsAny<CancellationToken>()))
-            .Returns(async IAsyncEnumerable<TransactionResult> GetResults()
+            .Returns(async IAsyncEnumerable < TransactionResult > GetResults()
             {
-                foreach (var transaction in transactions)
-                {
-                    await Task.Delay(20, cts.Token); // Simulate work
-                    yield return new TransactionResult(transaction.Id, true);
-                }
-            });
+            foreach (var transaction in transactions)
+            {
+                await Task.Delay(20, cts.Token); // Simulate work
+                yield return new TransactionResult(transaction.Id, true);
+            }
+        });
 
         var results = new List<Transaction>();
 

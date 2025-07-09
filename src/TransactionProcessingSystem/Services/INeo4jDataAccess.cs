@@ -27,14 +27,14 @@ public interface INeo4jDataAccess
     /// Streams multiple transaction upserts with async enumerable for high performance
     /// </summary>
     IAsyncEnumerable<TransactionResult> UpsertTransactionsAsync(
-        IAsyncEnumerable<Transaction> transactions, 
+        IAsyncEnumerable<Transaction> transactions,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Streams similar transactions for a given transaction using async enumerable
     /// </summary>
     IAsyncEnumerable<Transaction> FindSimilarTransactionsAsync(
-        Transaction transaction, 
+        Transaction transaction,
         CancellationToken cancellationToken = default);
 
     /// <summary>

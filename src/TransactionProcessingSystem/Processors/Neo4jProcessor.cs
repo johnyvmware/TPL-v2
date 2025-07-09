@@ -25,7 +25,7 @@ public sealed class Neo4jProcessor(
             var storedTransactionId = await neo4jDataAccess.UpsertTransactionAsync(transaction, cancellationToken)
                 .ConfigureAwait(false);
 
-            Logger.LogTrace("Successfully stored transaction {TransactionId} in Neo4j as {StoredId}", 
+            Logger.LogTrace("Successfully stored transaction {TransactionId} in Neo4j as {StoredId}",
                 transaction.Id, storedTransactionId);
 
             // Return the processed transaction for further pipeline processing
@@ -34,7 +34,7 @@ public sealed class Neo4jProcessor(
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to process transaction {TransactionId} in Neo4j", transaction.Id);
-            
+
             // Return the transaction marked as failed
             return transaction with { Status = ProcessingStatus.Failed };
         }
@@ -55,7 +55,7 @@ public sealed class Neo4jProcessor(
         await foreach (var result in neo4jDataAccess.UpsertTransactionsAsync(transactions, cancellationToken))
         {
             var status = result.IsSuccess ? ProcessingStatus.Processed : ProcessingStatus.Failed;
-            
+
             if (result.IsSuccess)
             {
                 processedCount++;
@@ -64,7 +64,7 @@ public sealed class Neo4jProcessor(
             else
             {
                 failedCount++;
-                Logger.LogWarning("Failed to process transaction {TransactionId}: {Error}", 
+                Logger.LogWarning("Failed to process transaction {TransactionId}: {Error}",
                     result.TransactionId, result.ErrorMessage);
             }
 
@@ -94,7 +94,7 @@ public sealed class Neo4jProcessor(
         try
         {
             Logger.LogDebug("Retrieving transaction analytics from Neo4j");
-            
+
             var analytics = await neo4jDataAccess.GetTransactionAnalyticsAsync(cancellationToken)
                 .ConfigureAwait(false);
 
@@ -125,13 +125,13 @@ public sealed class Neo4jProcessor(
         await foreach (var similar in neo4jDataAccess.FindSimilarTransactionsAsync(referenceTransaction, cancellationToken))
         {
             similarCount++;
-            Logger.LogTrace("Found similar transaction: {SimilarId} (Amount: {Amount:C})", 
+            Logger.LogTrace("Found similar transaction: {SimilarId} (Amount: {Amount:C})",
                 similar.Id, similar.Amount);
-            
+
             yield return similar;
         }
 
-        Logger.LogDebug("Found {SimilarCount} similar transactions for {TransactionId}", 
+        Logger.LogDebug("Found {SimilarCount} similar transactions for {TransactionId}",
             similarCount, referenceTransaction.Id);
     }
 
@@ -145,9 +145,9 @@ public sealed class Neo4jProcessor(
 
         await foreach (var statistic in neo4jDataAccess.GetGraphStatisticsAsync(cancellationToken))
         {
-            Logger.LogTrace("Graph statistic: {Type} {Name} = {Count}", 
+            Logger.LogTrace("Graph statistic: {Type} {Name} = {Count}",
                 statistic.Type, statistic.Name, statistic.Count);
-            
+
             yield return statistic;
         }
     }
@@ -171,7 +171,7 @@ public sealed class Neo4jProcessor(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var results = new List<IDictionary<string, object>>();
-        
+
         try
         {
             await foreach (var result in neo4jDataAccess.ExecuteQueryAsync(cypherQuery, parameters, cancellationToken))

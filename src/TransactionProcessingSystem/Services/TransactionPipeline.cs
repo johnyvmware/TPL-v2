@@ -36,7 +36,7 @@ public sealed class TransactionPipeline(
 
         try
         {
-            logger.LogInformation("Starting modern transaction pipeline processing with batch size {BatchSize}", 
+            logger.LogInformation("Starting modern transaction pipeline processing with batch size {BatchSize}",
                 options.BatchSize);
 
             // Use async enumerable streaming for memory efficiency
@@ -52,7 +52,7 @@ public sealed class TransactionPipeline(
                 else
                 {
                     failedCount++;
-                    logger.LogWarning("Failed to process transaction: {TransactionId} with status {Status}", 
+                    logger.LogWarning("Failed to process transaction: {TransactionId} with status {Status}",
                         processedTransaction.Id, processedTransaction.Status);
                 }
 
@@ -77,7 +77,7 @@ public sealed class TransactionPipeline(
         catch (Exception ex)
         {
             logger.LogError(ex, "Pipeline processing failed after processing {ProcessedCount} transactions", processedCount);
-            
+
             return new ProcessingResult
             {
                 TotalProcessed = processedCount,
@@ -94,7 +94,7 @@ public sealed class TransactionPipeline(
         CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Starting transaction stream processing through Neo4j processor");
-        
+
         return ProcessTransactionsStreamInternalAsync(transactions, cancellationToken);
     }
 
@@ -134,9 +134,9 @@ public sealed class TransactionPipeline(
 
         // Convert to async enumerable using custom extension
         var asyncTransactions = ConvertToAsyncEnumerable(transactions);
-        
+
         var processedTransactions = new List<Transaction>();
-        
+
         await foreach (var processedTransaction in ProcessTransactionsStreamAsync(asyncTransactions, cancellationToken))
         {
             processedTransactions.Add(processedTransaction);
@@ -159,7 +159,7 @@ public sealed class TransactionPipeline(
         try
         {
             logger.LogDebug("Retrieving pipeline analytics from Neo4j processor");
-            
+
             return await neo4jProcessor.AnalyzeTransactionPatternsAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -238,7 +238,7 @@ public sealed class TransactionPipeline(
         try
         {
             var analytics = await GetPipelineAnalyticsAsync(cancellationToken).ConfigureAwait(false);
-            
+
             var statistics = new List<GraphStatistic>();
             await foreach (var stat in GetGraphStatisticsAsync(cancellationToken))
             {
@@ -272,7 +272,7 @@ public sealed class TransactionPipeline(
     private static async IAsyncEnumerable<T> ConvertToAsyncEnumerableInternal<T>(IEnumerable<T> source)
     {
         await Task.Yield(); // Make it truly async to avoid compiler warning
-        
+
         foreach (var item in source)
         {
             yield return item;
@@ -280,7 +280,7 @@ public sealed class TransactionPipeline(
     }
 
     private static async IAsyncEnumerable<IList<T>> ChunkAsyncEnumerable<T>(
-        IAsyncEnumerable<T> source, 
+        IAsyncEnumerable<T> source,
         int chunkSize,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -306,11 +306,11 @@ public sealed class TransactionPipeline(
     private static decimal CalculateProcessingEfficiency(TransactionAnalytics analytics)
     {
         if (analytics.TotalTransactions == 0) return 0;
-        
+
         // Simple efficiency calculation based on relationships vs transactions
-        var relationshipDensity = (analytics.Relationships.CategorySimilarities + analytics.Relationships.AmountSimilarities) 
+        var relationshipDensity = (analytics.Relationships.CategorySimilarities + analytics.Relationships.AmountSimilarities)
                                  / (decimal)Math.Max(analytics.TotalTransactions, 1);
-        
+
         return Math.Min(relationshipDensity * 100, 100); // Cap at 100%
     }
 

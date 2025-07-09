@@ -41,7 +41,7 @@ public sealed class Neo4jReactiveDataAccess(
                         break;
 
                     observer.OnNext(result);
-                    
+
                     if (result.IsSuccess)
                     {
                         logger.LogTrace("Reactively processed transaction: {TransactionId}", result.TransactionId);
@@ -113,7 +113,7 @@ public sealed class Neo4jReactiveDataAccess(
 
             try
             {
-                logger.LogDebug("Starting reactive similar transactions search for {TransactionId}", 
+                logger.LogDebug("Starting reactive similar transactions search for {TransactionId}",
                     referenceTransaction.Id);
 
                 await foreach (var transaction in dataAccess.FindSimilarTransactionsAsync(referenceTransaction, linkedToken)
@@ -197,7 +197,7 @@ public sealed class Neo4jReactiveDataAccess(
                         break;
 
                     observer.OnNext(statistic);
-                    logger.LogTrace("Graph statistic: {Type} {Name} = {Count}", 
+                    logger.LogTrace("Graph statistic: {Type} {Name} = {Count}",
                         statistic.Type, statistic.Name, statistic.Count);
                 }
 
@@ -228,7 +228,7 @@ public sealed class Neo4jReactiveDataAccess(
                 while (!linkedToken.IsCancellationRequested)
                 {
                     var stopwatch = Stopwatch.StartNew();
-                    
+
                     try
                     {
                         var isConnected = await dataAccess.VerifyConnectivityAsync(linkedToken).ConfigureAwait(false);
@@ -242,7 +242,7 @@ public sealed class Neo4jReactiveDataAccess(
                         observer.OnNext(status);
                         _connectivitySubject.OnNext(status);
 
-                        logger.LogTrace("Connectivity check: {IsConnected} in {ResponseTime}ms", 
+                        logger.LogTrace("Connectivity check: {IsConnected} in {ResponseTime}ms",
                             isConnected, stopwatch.ElapsedMilliseconds);
                     }
                     catch (Exception ex)
@@ -278,7 +278,7 @@ public sealed class Neo4jReactiveDataAccess(
         BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait,
         CancellationToken cancellationToken = default)
     {
-        logger.LogDebug("Creating transaction channel with capacity {Capacity} and full mode {FullMode}", 
+        logger.LogDebug("Creating transaction channel with capacity {Capacity} and full mode {FullMode}",
             capacity, fullMode);
 
         var channelOptions = new BoundedChannelOptions(capacity)
@@ -316,7 +316,7 @@ public sealed class Neo4jReactiveDataAccess(
         {
             // Convert channel to async enumerable and process
             var transactions = reader.ReadAllAsync(cancellationToken);
-            
+
             await foreach (var result in dataAccess.UpsertTransactionsAsync(transactions, cancellationToken))
             {
                 if (result.IsSuccess)

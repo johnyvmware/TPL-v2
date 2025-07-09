@@ -59,9 +59,9 @@ public class Neo4jDataAccessTests : IDisposable
         // Arrange
         _mockRecord.Setup(r => r["test"]).Returns(new Mock<IValue>().Object);
         _mockRecord.Setup(r => r["test"].As<int>()).Returns(1);
-        
+
         _mockCursor.Setup(c => c.SingleAsync()).ReturnsAsync(_mockRecord.Object);
-        
+
         _mockTransaction
             .Setup(t => t.RunAsync("RETURN 1 AS test"))
             .ReturnsAsync(_mockCursor.Object);
@@ -102,9 +102,9 @@ public class Neo4jDataAccessTests : IDisposable
 
         _mockRecord.Setup(r => r["transactionId"]).Returns(new Mock<IValue>().Object);
         _mockRecord.Setup(r => r["transactionId"].As<string>()).Returns(expectedTransactionId);
-        
+
         _mockCursor.Setup(c => c.SingleAsync()).ReturnsAsync(_mockRecord.Object);
-        
+
         _mockTransaction
             .Setup(t => t.RunAsync(It.IsAny<string>(), It.IsAny<object>()))
             .ReturnsAsync(_mockCursor.Object);
@@ -159,7 +159,7 @@ public class Neo4jDataAccessTests : IDisposable
 
         // Assert
         similarTransactions.Should().HaveCount(2);
-        similarTransactions.Should().AllSatisfy(t => 
+        similarTransactions.Should().AllSatisfy(t =>
         {
             t.Id.Should().NotBeNullOrEmpty();
             t.Amount.Should().BeGreaterThan(0);
@@ -307,9 +307,9 @@ public class Neo4jDataAccessTests : IDisposable
     {
         _mockRecord.Setup(r => r["transactionId"]).Returns(new Mock<IValue>().Object);
         _mockRecord.Setup(r => r["transactionId"].As<string>()).Returns(() => Guid.NewGuid().ToString());
-        
+
         _mockCursor.Setup(c => c.SingleAsync()).ReturnsAsync(_mockRecord.Object);
-        
+
         _mockTransaction
             .Setup(t => t.RunAsync(It.IsAny<string>(), It.IsAny<object>()))
             .ReturnsAsync(_mockCursor.Object);
@@ -351,13 +351,13 @@ public class Neo4jDataAccessTests : IDisposable
 
         mockRecord.Setup(r => r.TryGetValue("id", out It.Ref<object>.IsAny)).Returns(true);
         mockRecord.Setup(r => r.TryGetValue("id", out It.Ref<object>.IsAny)).Callback((string key, out object value) => value = id);
-        
+
         mockRecord.Setup(r => r["id"]).Returns(mockValue.Object);
         mockRecord.Setup(r => r["id"].As<string>()).Returns(id);
-        
+
         mockRecord.Setup(r => r["amount"]).Returns(mockValue.Object);
         mockRecord.Setup(r => r["amount"].As<double>()).Returns(amount);
-        
+
         mockRecord.Setup(r => r["description"]).Returns(mockValue.Object);
         mockRecord.Setup(r => r["description"].As<string>()).Returns(description);
 
@@ -399,9 +399,9 @@ public class Neo4jDataAccessTests : IDisposable
 
         _mockRecord.Setup(r => r["analytics"]).Returns(new Mock<IValue>().Object);
         _mockRecord.Setup(r => r["analytics"].As<IDictionary<string, object>>()).Returns(analyticsData);
-        
+
         _mockCursor.Setup(c => c.SingleAsync()).ReturnsAsync(_mockRecord.Object);
-        
+
         _mockTransaction
             .Setup(t => t.RunAsync(It.IsAny<string>()))
             .ReturnsAsync(_mockCursor.Object);

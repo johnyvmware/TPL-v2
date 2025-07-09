@@ -209,7 +209,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var transactions = CreateSampleTransactions(10);
-        
+
         // Store transactions
         await foreach (var result in _dataAccess.UpsertTransactionsAsync(transactions.ToAsyncEnumerable()))
         {
@@ -259,7 +259,7 @@ public class Neo4jIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var transactions = CreateSampleTransactions(3);
-        
+
         await foreach (var result in _dataAccess.UpsertTransactionsAsync(transactions.ToAsyncEnumerable()))
         {
             result.IsSuccess.Should().BeTrue();

@@ -42,9 +42,9 @@ public class BasicTests
         };
 
         // Act
-        var modifiedTransaction = originalTransaction with 
-        { 
-            Amount = 75.00m, 
+        var modifiedTransaction = originalTransaction with
+        {
+            Amount = 75.00m,
             Description = "Modified Description",
             Status = ProcessingStatus.Processed
         };

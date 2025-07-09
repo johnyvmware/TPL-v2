@@ -19,7 +19,9 @@ public enum ProcessingStatus
     Processed,
     EmailEnriched,
     Categorized,
-    Exported
+    Exported,
+    Failed,
+    Cancelled
 }
 
 public record TransactionApiResponse

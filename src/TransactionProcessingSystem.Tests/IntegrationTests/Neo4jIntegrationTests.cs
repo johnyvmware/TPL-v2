@@ -1,0 +1,461 @@
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Neo4j.Driver;
+using TransactionProcessingSystem.Configuration;
+using TransactionProcessingSystem.Models;
+using TransactionProcessingSystem.Services;
+
+namespace TransactionProcessingSystem.Tests.IntegrationTests;
+
+/// <summary>
+/// Integration tests for the modernized Neo4j implementation
+/// Tests real database operations with IAsyncEnumerable streaming and modern C# patterns
+/// 
+/// NOTE: These tests require a running Neo4j instance or can be modified to use Neo4j TestContainers
+/// For CI/CD, consider using Neo4j Docker container or embedded Neo4j
+/// </summary>
+[Collection("Neo4j Integration Tests")]
+public class Neo4jIntegrationTests : IAsyncLifetime
+{
+    private readonly IHost _host;
+    private readonly INeo4jDataAccess _dataAccess;
+    private readonly IDriver _driver;
+    private readonly string _testDatabase;
+
+    public Neo4jIntegrationTests()
+    {
+        _testDatabase = $"test_{Guid.NewGuid():N}";
+
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureServices(services =>
+            {
+                // Configure for integration testing
+                var neo4jSettings = new Neo4jSettings
+                {
+                    ConnectionUri = Environment.GetEnvironmentVariable("NEO4J_URI") ?? "neo4j://localhost:7687",
+                    Username = Environment.GetEnvironmentVariable("NEO4J_USERNAME") ?? "neo4j",
+                    Password = Environment.GetEnvironmentVariable("NEO4J_PASSWORD") ?? "password",
+                    Database = _testDatabase,
+                    MaxConnectionPoolSize = 10,
+                    ConnectionTimeoutSeconds = 30
+                };
+
+                services.Configure<Neo4jSettings>(opts =>
+                {
+                    opts.ConnectionUri = neo4jSettings.ConnectionUri;
+                    opts.Username = neo4jSettings.Username;
+                    opts.Password = neo4jSettings.Password;
+                    opts.Database = neo4jSettings.Database;
+                    opts.MaxConnectionPoolSize = neo4jSettings.MaxConnectionPoolSize;
+                    opts.ConnectionTimeoutSeconds = neo4jSettings.ConnectionTimeoutSeconds;
+                });
+
+                services.AddSingleton<IDriver>(provider =>
+                {
+                    var authToken = string.IsNullOrEmpty(neo4jSettings.Password)
+                        ? AuthTokens.None
+                        : AuthTokens.Basic(neo4jSettings.Username, neo4jSettings.Password);
+
+                    return GraphDatabase.Driver(neo4jSettings.ConnectionUri, authToken);
+                });
+
+                services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
+                services.AddLogging(logging => logging.AddConsole().SetMinimumLevel(LogLevel.Information));
+            });
+
+        _host = builder.Build();
+        _dataAccess = _host.Services.GetRequiredService<INeo4jDataAccess>();
+        _driver = _host.Services.GetRequiredService<IDriver>();
+    }
+
+    public async Task InitializeAsync()
+    {
+        try
+        {
+            // Verify connectivity before running tests
+            var isConnected = await _dataAccess.VerifyConnectivityAsync();
+            if (!isConnected)
+            {
+                throw new InvalidOperationException(
+                    "Cannot connect to Neo4j for integration tests. " +
+                    "Please ensure Neo4j is running and accessible. " +
+                    "Set NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD environment variables if needed.");
+            }
+
+            // Initialize test database schema
+            await _dataAccess.InitializeDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to initialize Neo4j integration tests: {ex.Message}. " +
+                "Ensure Neo4j is running and accessible for integration testing.", ex);
+        }
+    }
+
+    public async Task DisposeAsync()
+    {
+        try
+        {
+            // Clean up test database
+            await using var session = _driver.AsyncSession();
+            await session.ExecuteWriteAsync(async tx =>
+            {
+                await tx.RunAsync("MATCH (n) DETACH DELETE n");
+                return Task.CompletedTask;
+            });
+        }
+        catch
+        {
+            // Ignore cleanup errors
+        }
+        finally
+        {
+            await _host.StopAsync();
+            _host.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task VerifyConnectivityAsync_ShouldConnectToRealDatabase()
+    {
+        // Act
+        var isConnected = await _dataAccess.VerifyConnectivityAsync();
+
+        // Assert
+        isConnected.Should().BeTrue("integration tests require a working Neo4j connection");
+    }
+
+    [Fact]
+    public async Task UpsertTransactionAsync_ShouldPersistTransactionInDatabase_WithModernPatterns()
+    {
+        // Arrange
+        var transaction = CreateSampleTransaction();
+
+        // Act
+        var result = await _dataAccess.UpsertTransactionAsync(transaction);
+
+        // Assert
+        result.Should().NotBeNullOrEmpty();
+        result.Should().Be(transaction.Id);
+
+        // Verify the transaction was actually stored
+        var storedTransaction = await FindTransactionById(transaction.Id);
+        storedTransaction.Should().NotBeNull();
+        storedTransaction!.Amount.Should().Be(transaction.Amount);
+        storedTransaction.Description.Should().Be(transaction.Description);
+    }
+
+    [Fact]
+    public async Task UpsertTransactionsAsync_ShouldStreamMultipleTransactions_UsingIAsyncEnumerable()
+    {
+        // Arrange
+        var transactions = CreateSampleTransactions(5);
+        var results = new List<TransactionResult>();
+
+        // Act
+        await foreach (var result in _dataAccess.UpsertTransactionsAsync(transactions.ToAsyncEnumerable()))
+        {
+            results.Add(result);
+        }
+
+        // Assert
+        results.Should().HaveCount(5);
+        results.Should().AllSatisfy(r => r.IsSuccess.Should().BeTrue());
+
+        // Verify all transactions were stored
+        foreach (var transaction in transactions)
+        {
+            var stored = await FindTransactionById(transaction.Id);
+            stored.Should().NotBeNull();
+        }
+    }
+
+    [Fact]
+    public async Task FindSimilarTransactionsAsync_ShouldFindActualSimilarTransactions_WithGraphQueries()
+    {
+        // Arrange
+        var baseTransaction = CreateSampleTransaction() with { Amount = 100.00m, Category = "Food" };
+        var similarByAmount = CreateSampleTransaction() with { Amount = 105.00m, Category = "Shopping" };
+        var similarByCategory = CreateSampleTransaction() with { Amount = 200.00m, Category = "Food" };
+        var dissimilar = CreateSampleTransaction() with { Amount = 500.00m, Category = "Travel" };
+
+        // Store all transactions
+        await _dataAccess.UpsertTransactionAsync(baseTransaction);
+        await _dataAccess.UpsertTransactionAsync(similarByAmount);
+        await _dataAccess.UpsertTransactionAsync(similarByCategory);
+        await _dataAccess.UpsertTransactionAsync(dissimilar);
+
+        var similarTransactions = new List<Transaction>();
+
+        // Act
+        await foreach (var similar in _dataAccess.FindSimilarTransactionsAsync(baseTransaction))
+        {
+            similarTransactions.Add(similar);
+        }
+
+        // Assert
+        similarTransactions.Should().HaveCountGreaterThan(0);
+        similarTransactions.Should().Contain(t => t.Id == similarByAmount.Id);
+        similarTransactions.Should().Contain(t => t.Id == similarByCategory.Id);
+        similarTransactions.Should().NotContain(t => t.Id == baseTransaction.Id);
+    }
+
+    [Fact]
+    public async Task GetTransactionAnalyticsAsync_ShouldReturnRealAnalytics_WithStrongTyping()
+    {
+        // Arrange
+        var transactions = CreateSampleTransactions(10);
+
+        // Store transactions
+        await foreach (var result in _dataAccess.UpsertTransactionsAsync(transactions.ToAsyncEnumerable()))
+        {
+            result.IsSuccess.Should().BeTrue();
+        }
+
+        // Act
+        var analytics = await _dataAccess.GetTransactionAnalyticsAsync();
+
+        // Assert
+        analytics.Should().NotBeNull();
+        analytics.TotalTransactions.Should().BeGreaterOrEqualTo(10);
+        analytics.TotalAmount.Should().BeGreaterThan(0);
+        analytics.AverageAmount.Should().BeGreaterThan(0);
+        analytics.Categories.Should().NotBeEmpty();
+        analytics.DateRange.Should().NotBeNull();
+        analytics.DateRange.Earliest.Should().NotBeNull();
+        analytics.DateRange.Latest.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ExecuteQueryAsync_ShouldStreamCustomQueryResults()
+    {
+        // Arrange
+        var transaction = CreateSampleTransaction();
+        await _dataAccess.UpsertTransactionAsync(transaction);
+
+        var cypher = "MATCH (t:Transaction) WHERE t.id = $transactionId RETURN t.id as id, t.amount as amount";
+        var parameters = new { transactionId = transaction.Id };
+        var results = new List<IDictionary<string, object>>();
+
+        // Act
+        await foreach (var result in _dataAccess.ExecuteQueryAsync(cypher, parameters))
+        {
+            results.Add(result);
+        }
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].Should().ContainKey("id");
+        results[0].Should().ContainKey("amount");
+        results[0]["id"].Should().Be(transaction.Id);
+    }
+
+    [Fact]
+    public async Task GetGraphStatisticsAsync_ShouldReturnActualDatabaseStatistics()
+    {
+        // Arrange
+        var transactions = CreateSampleTransactions(3);
+
+        await foreach (var result in _dataAccess.UpsertTransactionsAsync(transactions.ToAsyncEnumerable()))
+        {
+            result.IsSuccess.Should().BeTrue();
+        }
+
+        var statistics = new List<GraphStatistic>();
+
+        // Act
+        await foreach (var statistic in _dataAccess.GetGraphStatisticsAsync())
+        {
+            statistics.Add(statistic);
+        }
+
+        // Assert
+        statistics.Should().NotBeEmpty();
+        statistics.Should().Contain(s => s.Type == "Node" && s.Name == "Transaction");
+        statistics.Should().Contain(s => s.Type == "Node" && s.Name == "Category");
+        statistics.Should().Contain(s => s.Type == "Relationship");
+        statistics.Should().AllSatisfy(s => s.Count.Should().BeGreaterThan(0));
+    }
+
+    [Fact]
+    public async Task DatabaseSchema_ShouldCreateProperConstraintsAndIndexes()
+    {
+        // Act
+        await _dataAccess.InitializeDatabaseAsync();
+
+        // Assert - Verify constraints exist
+        var constraints = await GetDatabaseConstraints();
+        constraints.Should().Contain(c => c.Contains("transaction_id_unique"));
+        constraints.Should().Contain(c => c.Contains("category_name_unique"));
+
+        // Assert - Verify indexes exist
+        var indexes = await GetDatabaseIndexes();
+        indexes.Should().Contain(i => i.Contains("transaction_amount_idx"));
+        indexes.Should().Contain(i => i.Contains("transaction_date_idx"));
+    }
+
+    [Fact]
+    public async Task TransactionGraph_ShouldCreateProperRelationships()
+    {
+        // Arrange
+        var transaction1 = CreateSampleTransaction() with { Category = "Food", Date = new DateTime(2024, 1, 15) };
+        var transaction2 = CreateSampleTransaction() with { Category = "Food", Date = new DateTime(2024, 1, 15) };
+
+        // Act
+        await _dataAccess.UpsertTransactionAsync(transaction1);
+        await _dataAccess.UpsertTransactionAsync(transaction2);
+
+        // Assert - Verify relationships were created
+        var relationshipCount = await CountRelationshipsBetweenTransactions(transaction1.Id, transaction2.Id);
+        relationshipCount.Should().BeGreaterThan(0, "transactions with same category should have relationships");
+    }
+
+    [Fact]
+    public async Task ConcurrentOperations_ShouldHandleMultipleStreams_WithModernAsyncPatterns()
+    {
+        // Arrange
+        var batch1 = CreateSampleTransactions(5);
+        var batch2 = CreateSampleTransactions(5);
+
+        // Act - Process multiple batches concurrently
+        var task1 = ProcessBatchAsync(batch1);
+        var task2 = ProcessBatchAsync(batch2);
+
+        var results = await Task.WhenAll(task1, task2);
+
+        // Assert
+        results[0].Should().HaveCount(5);
+        results[1].Should().HaveCount(5);
+        results.SelectMany(r => r).Should().AllSatisfy(r => r.IsSuccess.Should().BeTrue());
+    }
+
+    // Helper methods using modern C# patterns
+
+    private static Transaction CreateSampleTransaction() => new()
+    {
+        Id = Guid.NewGuid().ToString(),
+        Date = DateTime.UtcNow.AddDays(-Random.Shared.Next(1, 30)),
+        Amount = Random.Shared.Next(10, 1000),
+        Description = $"Integration test transaction {Random.Shared.Next(1000, 9999)}",
+        Category = new[] { "Food", "Transport", "Shopping", "Bills", "Entertainment" }[Random.Shared.Next(5)],
+        Status = ProcessingStatus.Fetched
+    };
+
+    private static List<Transaction> CreateSampleTransactions(int count) =>
+        Enumerable.Range(0, count)
+            .Select(_ => CreateSampleTransaction())
+            .ToList();
+
+    private async Task<List<TransactionResult>> ProcessBatchAsync(List<Transaction> transactions)
+    {
+        var results = new List<TransactionResult>();
+        await foreach (var result in _dataAccess.UpsertTransactionsAsync(transactions.ToAsyncEnumerable()))
+        {
+            results.Add(result);
+        }
+        return results;
+    }
+
+    private async Task<Transaction?> FindTransactionById(string transactionId)
+    {
+        var cypher = "MATCH (t:Transaction {id: $id}) RETURN t.id as id, t.amount as amount, t.description as description, t.category as category, t.status as status";
+        var parameters = new { id = transactionId };
+
+        await foreach (var record in _dataAccess.ExecuteQueryAsync(cypher, parameters))
+        {
+            return new Transaction
+            {
+                Id = record["id"].ToString()!,
+                Amount = Convert.ToDecimal(record["amount"]),
+                Description = record["description"].ToString()!,
+                Category = record["category"]?.ToString(),
+                Status = Enum.Parse<ProcessingStatus>(record["status"].ToString()!),
+                Date = DateTime.UtcNow // Simplified for test
+            };
+        }
+
+        return null;
+    }
+
+    private async Task<List<string>> GetDatabaseConstraints()
+    {
+        var constraints = new List<string>();
+        var cypher = "SHOW CONSTRAINTS";
+
+        try
+        {
+            await foreach (var record in _dataAccess.ExecuteQueryAsync(cypher))
+            {
+                if (record.TryGetValue("name", out var name))
+                {
+                    constraints.Add(name.ToString()!);
+                }
+            }
+        }
+        catch
+        {
+            // Neo4j version might not support SHOW CONSTRAINTS
+            // Fall back to older syntax or skip
+        }
+
+        return constraints;
+    }
+
+    private async Task<List<string>> GetDatabaseIndexes()
+    {
+        var indexes = new List<string>();
+        var cypher = "SHOW INDEXES";
+
+        try
+        {
+            await foreach (var record in _dataAccess.ExecuteQueryAsync(cypher))
+            {
+                if (record.TryGetValue("name", out var name))
+                {
+                    indexes.Add(name.ToString()!);
+                }
+            }
+        }
+        catch
+        {
+            // Neo4j version might not support SHOW INDEXES
+            // Fall back to older syntax or skip
+        }
+
+        return indexes;
+    }
+
+    private async Task<long> CountRelationshipsBetweenTransactions(string id1, string id2)
+    {
+        var cypher = """
+            MATCH (t1:Transaction {id: $id1})
+            MATCH (t2:Transaction {id: $id2})
+            MATCH (t1)-[r]-(t2)
+            RETURN count(r) as relationshipCount
+            """;
+
+        var parameters = new { id1, id2 };
+
+        await foreach (var record in _dataAccess.ExecuteQueryAsync(cypher, parameters))
+        {
+            return Convert.ToInt64(record["relationshipCount"]);
+        }
+
+        return 0;
+    }
+}
+
+/// <summary>
+/// Collection definition to ensure integration tests run sequentially
+/// </summary>
+[CollectionDefinition("Neo4j Integration Tests", DisableParallelization = true)]
+public class Neo4jIntegrationTestCollection
+{
+    // This class has no code, and is never created. Its purpose is simply
+    // to be the place to apply [CollectionDefinition] and all the
+    // ICollectionFixture<> interfaces.
+}

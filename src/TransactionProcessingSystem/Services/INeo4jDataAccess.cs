@@ -23,10 +23,7 @@ public interface INeo4jDataAccess
     /// </summary>
     Task<string> UpsertTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Creates relationships between transactions based on common attributes
-    /// </summary>
-    Task CreateTransactionRelationshipsAsync(string transactionId, CancellationToken cancellationToken = default);
+
 
     /// <summary>
     /// Retrieves transaction analytics from the graph database

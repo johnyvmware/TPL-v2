@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
+using System.Reactive;
 using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Pipeline;
@@ -106,7 +107,7 @@ public class Program
             Password = "demo"
         };
 
-        // Configure Neo4j Driver (Singleton pattern as recommended by Neo4j)
+        // Configure Neo4j Driver following official best practices
         services.AddSingleton<IDriver>(serviceProvider =>
         {
             var logger = serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
@@ -119,7 +120,11 @@ public class Program
                     neo4jSettings.ConnectionUri,
                     AuthTokens.Basic(neo4jSettings.Username, neo4jSettings.Password));
 
-                logger.LogInformation("Neo4j driver configured successfully");
+                // Connectivity will be verified during initialization
+                // Driver construction indicates successful basic configuration
+                
+                logger.LogInformation("Neo4j driver configured successfully with connection pool size: {PoolSize}", 
+                    neo4jSettings.MaxConnectionPoolSize);
                 return driver;
             }
             catch (Exception ex)
@@ -129,8 +134,9 @@ public class Program
             }
         });
 
-        // Configure Neo4j services
+        // Configure Neo4j services (Async and Reactive)
         services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
+        services.AddScoped<INeo4jReactiveDataAccess, Neo4jReactiveDataAccess>();
 
         // HTTP Client
         services.AddHttpClient<TransactionFetcher>();

@@ -1,201 +1,386 @@
-using Neo4j.Driver;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Reactive.Disposables;
-using TransactionProcessingSystem.Configuration;
+using System.Reactive.Subjects;
+using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Services;
 
 /// <summary>
-/// Reactive Neo4j data access implementation using System.Reactive wrappers
-/// Provides backpressure-aware data streaming and flow control around async Neo4j operations
+/// Modern reactive Neo4j data access implementation using latest C# features
+/// Combines IAsyncEnumerable with System.Reactive for optimal streaming performance
+/// Primary constructor pattern with advanced backpressure control using channels
 /// </summary>
-public class Neo4jReactiveDataAccess : INeo4jReactiveDataAccess, IDisposable
+public sealed class Neo4jReactiveDataAccess(
+    INeo4jDataAccess dataAccess,
+    ILogger<Neo4jReactiveDataAccess> logger) : INeo4jReactiveDataAccess, IAsyncDisposable
 {
-    private readonly INeo4jDataAccess _dataAccess;
-    private readonly ILogger<Neo4jReactiveDataAccess> _logger;
-    private readonly CompositeDisposable _disposables;
+    private readonly Subject<TransactionAnalytics> _analyticsSubject = new();
+    private readonly Subject<ConnectivityStatus> _connectivitySubject = new();
     private bool _disposed;
 
-    public Neo4jReactiveDataAccess(
-        INeo4jDataAccess dataAccess,
-        ILogger<Neo4jReactiveDataAccess> logger)
+    public IObservable<TransactionResult> UpsertTransactionsReactive(
+        IAsyncEnumerable<Transaction> transactions,
+        CancellationToken cancellationToken = default)
     {
-        _dataAccess = dataAccess ?? throw new ArgumentNullException(nameof(dataAccess));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _disposables = new CompositeDisposable();
-    }
-
-    public IObservable<string> UpsertTransactionsReactive(IObservable<Transaction> transactions)
-    {
-        return Observable.Create<string>(observer =>
+        return Observable.Create<TransactionResult>(async (observer, ct) =>
         {
-            _logger.LogDebug("Starting reactive transaction upsert stream");
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct);
+            var linkedToken = linkedCts.Token;
 
-            var subscription = transactions
-                .Buffer(TimeSpan.FromSeconds(2), 10) // Batch for efficiency
-                .Where(batch => batch.Any())
-                .SelectMany(batch => Observable.FromAsync(async () =>
+            try
+            {
+                logger.LogDebug("Starting reactive transaction upsert stream");
+
+                await foreach (var result in dataAccess.UpsertTransactionsAsync(transactions, linkedToken)
+                    .WithCancellation(linkedToken).ConfigureAwait(false))
                 {
-                    var results = new List<string>();
-                    foreach (var transaction in batch)
+                    if (linkedToken.IsCancellationRequested)
+                        break;
+
+                    observer.OnNext(result);
+                    
+                    if (result.IsSuccess)
                     {
-                        try
-                        {
-                            var transactionId = await _dataAccess.UpsertTransactionAsync(transaction);
-                            results.Add(transactionId);
-                            _logger.LogTrace("Successfully processed transaction: {TransactionId}", transactionId);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to upsert transaction {TransactionId}", transaction.Id);
-                            throw;
-                        }
+                        logger.LogTrace("Reactively processed transaction: {TransactionId}", result.TransactionId);
                     }
-                    return results;
-                }).SelectMany(results => results))
-                .Subscribe(
-                    onNext: transactionId => observer.OnNext(transactionId),
-                    onError: error =>
+                    else
                     {
-                        _logger.LogError(error, "Error in reactive transaction processing stream");
-                        observer.OnError(error);
-                    },
-                    onCompleted: () =>
+                        logger.LogWarning("Reactive processing failed for transaction {TransactionId}: {Error}",
+                            result.TransactionId, result.ErrorMessage);
+                    }
+                }
+
+                observer.OnCompleted();
+                logger.LogDebug("Completed reactive transaction upsert stream");
+            }
+            catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+            {
+                logger.LogDebug("Reactive transaction upsert stream was cancelled");
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in reactive transaction upsert stream");
+                observer.OnError(ex);
+            }
+        });
+    }
+
+    public IObservable<TransactionAnalytics> GetAnalyticsReactive(CancellationToken cancellationToken = default)
+    {
+        return Observable.Create<TransactionAnalytics>(async (observer, ct) =>
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct);
+            var linkedToken = linkedCts.Token;
+
+            try
+            {
+                // Initial analytics fetch
+                var analytics = await dataAccess.GetTransactionAnalyticsAsync(linkedToken).ConfigureAwait(false);
+                observer.OnNext(analytics);
+
+                // Subscribe to analytics updates (you could implement periodic updates here)
+                using var subscription = _analyticsSubject
+                    .TakeUntil(Observable.FromAsync(() => Task.Delay(Timeout.Infinite, linkedToken)))
+                    .Subscribe(observer);
+
+                // Keep the observable alive until cancellation
+                await Task.Delay(Timeout.Infinite, linkedToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+            {
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in reactive analytics stream");
+                observer.OnError(ex);
+            }
+        });
+    }
+
+    public IObservable<Transaction> FindSimilarTransactionsReactive(
+        Transaction referenceTransaction,
+        CancellationToken cancellationToken = default)
+    {
+        return Observable.Create<Transaction>(async (observer, ct) =>
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct);
+            var linkedToken = linkedCts.Token;
+
+            try
+            {
+                logger.LogDebug("Starting reactive similar transactions search for {TransactionId}", 
+                    referenceTransaction.Id);
+
+                await foreach (var transaction in dataAccess.FindSimilarTransactionsAsync(referenceTransaction, linkedToken)
+                    .WithCancellation(linkedToken).ConfigureAwait(false))
+                {
+                    if (linkedToken.IsCancellationRequested)
+                        break;
+
+                    observer.OnNext(transaction);
+                    logger.LogTrace("Found similar transaction: {SimilarId}", transaction.Id);
+                }
+
+                observer.OnCompleted();
+                logger.LogDebug("Completed reactive similar transactions search");
+            }
+            catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+            {
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in reactive similar transactions stream");
+                observer.OnError(ex);
+            }
+        });
+    }
+
+    public IObservable<IDictionary<string, object>> ExecuteQueryReactive(
+        string cypher,
+        object? parameters = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Observable.Create<IDictionary<string, object>>(async (observer, ct) =>
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct);
+            var linkedToken = linkedCts.Token;
+
+            try
+            {
+                logger.LogDebug("Executing reactive Cypher query");
+
+                await foreach (var result in dataAccess.ExecuteQueryAsync(cypher, parameters, linkedToken)
+                    .WithCancellation(linkedToken).ConfigureAwait(false))
+                {
+                    if (linkedToken.IsCancellationRequested)
+                        break;
+
+                    observer.OnNext(result);
+                }
+
+                observer.OnCompleted();
+                logger.LogDebug("Completed reactive query execution");
+            }
+            catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+            {
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in reactive query execution");
+                observer.OnError(ex);
+            }
+        });
+    }
+
+    public IObservable<GraphStatistic> GetGraphStatisticsReactive(CancellationToken cancellationToken = default)
+    {
+        return Observable.Create<GraphStatistic>(async (observer, ct) =>
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct);
+            var linkedToken = linkedCts.Token;
+
+            try
+            {
+                logger.LogDebug("Starting reactive graph statistics stream");
+
+                await foreach (var statistic in dataAccess.GetGraphStatisticsAsync(linkedToken)
+                    .WithCancellation(linkedToken).ConfigureAwait(false))
+                {
+                    if (linkedToken.IsCancellationRequested)
+                        break;
+
+                    observer.OnNext(statistic);
+                    logger.LogTrace("Graph statistic: {Type} {Name} = {Count}", 
+                        statistic.Type, statistic.Name, statistic.Count);
+                }
+
+                observer.OnCompleted();
+                logger.LogDebug("Completed reactive graph statistics stream");
+            }
+            catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+            {
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in reactive graph statistics stream");
+                observer.OnError(ex);
+            }
+        });
+    }
+
+    public IObservable<ConnectivityStatus> VerifyConnectivityReactive(CancellationToken cancellationToken = default)
+    {
+        return Observable.Create<ConnectivityStatus>(async (observer, ct) =>
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct);
+            var linkedToken = linkedCts.Token;
+
+            try
+            {
+                while (!linkedToken.IsCancellationRequested)
+                {
+                    var stopwatch = Stopwatch.StartNew();
+                    
+                    try
                     {
-                        _logger.LogDebug("Reactive transaction processing stream completed");
-                        observer.OnCompleted();
-                    });
+                        var isConnected = await dataAccess.VerifyConnectivityAsync(linkedToken).ConfigureAwait(false);
+                        stopwatch.Stop();
 
-            return subscription;
-        });
-    }
+                        var status = new ConnectivityStatus(
+                            isConnected,
+                            stopwatch.Elapsed,
+                            isConnected ? null : "Connection failed");
 
-    public IObservable<IDictionary<string, object>> GetAnalyticsReactive()
-    {
-        return Observable.FromAsync(async () =>
-        {
-            try
+                        observer.OnNext(status);
+                        _connectivitySubject.OnNext(status);
+
+                        logger.LogTrace("Connectivity check: {IsConnected} in {ResponseTime}ms", 
+                            isConnected, stopwatch.ElapsedMilliseconds);
+                    }
+                    catch (Exception ex)
+                    {
+                        stopwatch.Stop();
+                        var status = new ConnectivityStatus(false, stopwatch.Elapsed, ex.Message);
+                        observer.OnNext(status);
+                        _connectivitySubject.OnNext(status);
+
+                        logger.LogWarning(ex, "Connectivity check failed");
+                    }
+
+                    // Wait before next check (configurable interval)
+                    await Task.Delay(TimeSpan.FromSeconds(30), linkedToken).ConfigureAwait(false);
+                }
+
+                observer.OnCompleted();
+            }
+            catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
             {
-                _logger.LogDebug("Getting analytics reactively");
-                var analytics = await _dataAccess.GetTransactionAnalyticsAsync();
-                _logger.LogDebug("Retrieved analytics with {Count} transactions",
-                    analytics.TryGetValue("totalTransactions", out var count) ? count : 0);
-                return analytics;
+                observer.OnCompleted();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to get reactive analytics");
-                return new Dictionary<string, object>
-                {
-                    ["error"] = ex.Message,
-                    ["totalTransactions"] = 0
-                } as IDictionary<string, object>;
-            }
-        });
-    }
-
-    public IObservable<Transaction> FindSimilarTransactionsReactive(Transaction transaction)
-    {
-        return Observable.FromAsync(async () =>
-        {
-            try
-            {
-                const string cypher = """
-                    MATCH (t:Transaction)
-                    WHERE t.id <> $transactionId
-                    AND (
-                        abs(t.amount - $amount) <= 10.0
-                        OR (t.category IS NOT NULL AND t.category = $category)
-                    )
-                    RETURN t.id as id, 
-                           t.date as date, 
-                           t.amount as amount, 
-                           t.description as description,
-                           t.cleanDescription as cleanDescription,
-                           t.category as category,
-                           t.status as status
-                    ORDER BY abs(t.amount - $amount)
-                    LIMIT 20
-                    """;
-
-                var parameters = new
-                {
-                    transactionId = transaction.Id,
-                    amount = (double)transaction.Amount,
-                    category = transaction.Category
-                };
-
-                var results = await _dataAccess.ExecuteQueryAsync(cypher, parameters);
-
-                return results.Select(record => new Transaction
-                {
-                    Id = record["id"].ToString() ?? "",
-                    Date = DateTime.Parse(record["date"].ToString() ?? DateTime.UtcNow.ToString()),
-                    Amount = Convert.ToDecimal(record["amount"]),
-                    Description = record["description"]?.ToString() ?? "",
-                    CleanDescription = record["cleanDescription"]?.ToString(),
-                    Category = record["category"]?.ToString(),
-                    Status = Enum.TryParse<ProcessingStatus>(record["status"]?.ToString(), out var status)
-                        ? status : ProcessingStatus.Processed
-                }).ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to find similar transactions for {TransactionId}", transaction.Id);
-                return new List<Transaction>();
-            }
-        }).SelectMany(transactions => transactions);
-    }
-
-    public IObservable<IDictionary<string, object>> ExecuteQueryReactive(string cypher, object? parameters = null)
-    {
-        return Observable.FromAsync(async () =>
-        {
-            try
-            {
-                var results = await _dataAccess.ExecuteQueryAsync(cypher, parameters);
-                return results.ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to execute reactive query");
-                return new List<IDictionary<string, object>>
-                {
-                    new Dictionary<string, object> { ["error"] = ex.Message }
-                };
-            }
-        }).SelectMany(results => results);
-    }
-
-    public IObservable<bool> VerifyConnectivityReactive()
-    {
-        return Observable.FromAsync(async () =>
-        {
-            try
-            {
-                var isConnected = await _dataAccess.VerifyConnectivityAsync();
-                _logger.LogDebug("Reactive connectivity check: {IsConnected}", isConnected);
-                return isConnected;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Reactive connectivity verification failed");
-                return false;
+                logger.LogError(ex, "Error in reactive connectivity monitoring");
+                observer.OnError(ex);
             }
         });
     }
 
-    public void Dispose()
+    public async ValueTask<ChannelWriter<Transaction>> CreateTransactionChannelAsync(
+        int capacity = 1000,
+        BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait,
+        CancellationToken cancellationToken = default)
+    {
+        logger.LogDebug("Creating transaction channel with capacity {Capacity} and full mode {FullMode}", 
+            capacity, fullMode);
+
+        var channelOptions = new BoundedChannelOptions(capacity)
+        {
+            FullMode = fullMode,
+            SingleReader = false,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false
+        };
+
+        var channel = Channel.CreateBounded<Transaction>(channelOptions);
+
+        // Start background processing of the channel
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await ProcessChannelAsync(channel.Reader, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error processing transaction channel");
+            }
+        }, cancellationToken);
+
+        return channel.Writer;
+    }
+
+    private async Task ProcessChannelAsync(ChannelReader<Transaction> reader, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Starting channel processing");
+
+        try
+        {
+            // Convert channel to async enumerable and process
+            var transactions = reader.ReadAllAsync(cancellationToken);
+            
+            await foreach (var result in dataAccess.UpsertTransactionsAsync(transactions, cancellationToken))
+            {
+                if (result.IsSuccess)
+                {
+                    logger.LogTrace("Channel processed transaction: {TransactionId}", result.TransactionId);
+                }
+                else
+                {
+                    logger.LogWarning("Channel processing failed for transaction {TransactionId}: {Error}",
+                        result.TransactionId, result.ErrorMessage);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error in channel processing");
+            throw;
+        }
+        finally
+        {
+            logger.LogDebug("Channel processing completed");
+        }
+    }
+
+    /// <summary>
+    /// Publishes analytics updates to reactive subscribers
+    /// </summary>
+    public async ValueTask PublishAnalyticsUpdateAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var analytics = await dataAccess.GetTransactionAnalyticsAsync(cancellationToken).ConfigureAwait(false);
+            _analyticsSubject.OnNext(analytics);
+            logger.LogDebug("Published analytics update to reactive subscribers");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to publish analytics update");
+            _analyticsSubject.OnError(ex);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
     {
         if (!_disposed)
         {
-            _disposables?.Dispose();
+            logger.LogDebug("Disposing reactive Neo4j data access");
+
+            try
+            {
+                _analyticsSubject.OnCompleted();
+                _connectivitySubject.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error completing reactive subjects during disposal");
+            }
+            finally
+            {
+                _analyticsSubject.Dispose();
+                _connectivitySubject.Dispose();
+            }
+
             _disposed = true;
-            _logger.LogDebug("Neo4j reactive data access disposed");
+            logger.LogDebug("Reactive Neo4j data access disposed");
         }
     }
 }

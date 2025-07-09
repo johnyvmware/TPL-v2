@@ -56,3 +56,15 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# User secrets
+**/Properties/launchSettings.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+!appsettings.Production.json
+
+# Environment files
+.env
+.env.local
+.env.*.local

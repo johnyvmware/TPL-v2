@@ -2,16 +2,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Processors;
 
 var builder = Host.CreateApplicationBuilder(args);
-
-// Configuration
-builder.Services.Configure<Neo4jSettings>(
-    builder.Configuration.GetSection("Neo4j"));
 
 // Logging
 builder.Services.AddLogging(logging =>
@@ -20,18 +17,8 @@ builder.Services.AddLogging(logging =>
     logging.SetMinimumLevel(LogLevel.Information);
 });
 
-// Neo4j Driver (Singleton)
-builder.Services.AddSingleton<IDriver>(serviceProvider =>
-{
-    var settings = builder.Configuration.GetSection("Neo4j").Get<Neo4jSettings>()
-        ?? throw new InvalidOperationException("Neo4j configuration not found");
-
-    var authToken = string.IsNullOrEmpty(settings.Password)
-        ? AuthTokens.None
-        : AuthTokens.Basic(settings.Username, settings.Password);
-
-    return GraphDatabase.Driver(settings.ConnectionUri, authToken);
-});
+// Add Neo4j services with modern configuration
+builder.Services.AddNeo4jServices(builder.Configuration);
 
 // Neo4j Services
 builder.Services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
@@ -47,6 +34,21 @@ builder.Services.AddScoped<TransactionPipeline>();
 builder.Services.AddHostedService<Neo4jBackgroundService>();
 
 var host = builder.Build();
+
+// Validate configuration at startup
+try
+{
+    var neo4jSettings = host.Services.GetRequiredService<IOptions<Neo4jSettings>>().Value;
+    var logger = host.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogInformation("Neo4j configuration validated successfully. Connected to: {ConnectionUri}", 
+        neo4jSettings.ConnectionUri);
+}
+catch (Exception ex)
+{
+    var logger = host.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Failed to validate Neo4j configuration");
+    throw;
+}
 
 // Run the application
 await host.RunAsync();

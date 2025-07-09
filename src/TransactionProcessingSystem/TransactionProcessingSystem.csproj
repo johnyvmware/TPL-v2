@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,6 +8,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <WarningsNotAsErrors>CS8618</WarningsNotAsErrors>
+    <UserSecretsId>94bedc6c-a871-4a2e-b4c5-98271ef751d2</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

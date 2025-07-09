@@ -55,7 +55,7 @@ public class BasicTests
         modifiedTransaction.Description.Should().Be("Modified Description");
         modifiedTransaction.Category.Should().Be("Food");
         modifiedTransaction.Status.Should().Be(ProcessingStatus.Processed);
-        
+
         // Original should be unchanged
         originalTransaction.Amount.Should().Be(50.00m);
         originalTransaction.Description.Should().Be("Original Description");
@@ -117,4 +117,4 @@ public class BasicTests
         // Assert
         transaction.Category.Should().BeEmpty();
     }
-} 
+}

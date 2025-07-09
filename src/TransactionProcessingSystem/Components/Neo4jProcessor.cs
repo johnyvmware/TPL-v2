@@ -34,8 +34,8 @@ public class Neo4jProcessor : ProcessorBase<Transaction, Transaction>
             _logger.LogDebug("Transaction {Id} stored with automatic relationship creation", transactionId);
 
             // Update transaction status to indicate Neo4j processing is complete
-            var processedTransaction = transaction with 
-            { 
+            var processedTransaction = transaction with
+            {
                 Status = ProcessingStatus.Exported // Using Exported status to indicate graph storage is complete
             };
 
@@ -45,7 +45,7 @@ public class Neo4jProcessor : ProcessorBase<Transaction, Transaction>
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process transaction {Id} in Neo4j processor", transaction.Id);
-            
+
             // Return the transaction unchanged if Neo4j processing fails
             // This allows the pipeline to continue even if graph storage fails
             return transaction;

@@ -111,7 +111,7 @@ public class Program
         services.AddSingleton<IDriver>(serviceProvider =>
         {
             var logger = serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
-            
+
             logger.LogInformation("Configuring Neo4j driver for URI: {Uri}", neo4jSettings.ConnectionUri);
 
             try
@@ -122,8 +122,8 @@ public class Program
 
                 // Connectivity will be verified during initialization
                 // Driver construction indicates successful basic configuration
-                
-                logger.LogInformation("Neo4j driver configured successfully with connection pool size: {PoolSize}", 
+
+                logger.LogInformation("Neo4j driver configured successfully with connection pool size: {PoolSize}",
                     neo4jSettings.MaxConnectionPoolSize);
                 return driver;
             }
@@ -217,17 +217,17 @@ public class Program
     {
         await using var scope = services.CreateAsyncScope();
         var neo4jDataAccess = scope.ServiceProvider.GetService<INeo4jDataAccess>();
-        
+
         if (neo4jDataAccess == null)
         {
             logger.LogWarning("Neo4j data access service not available. Skipping Neo4j initialization.");
             return;
         }
-        
+
         try
         {
             logger.LogInformation("Initializing Neo4j database...");
-            
+
             // Verify connectivity
             var isConnected = await neo4jDataAccess.VerifyConnectivityAsync();
             if (!isConnected)
@@ -238,7 +238,7 @@ public class Program
 
             // Initialize database schema with constraints, indexes, and versioning
             await neo4jDataAccess.InitializeDatabaseAsync();
-            
+
             logger.LogInformation("Neo4j database schema initialized successfully");
         }
         catch (Exception ex)

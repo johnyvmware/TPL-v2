@@ -82,7 +82,7 @@ public class Neo4jReactiveDataAccess : INeo4jReactiveDataAccess, IDisposable
             {
                 _logger.LogDebug("Getting analytics reactively");
                 var analytics = await _dataAccess.GetTransactionAnalyticsAsync();
-                _logger.LogDebug("Retrieved analytics with {Count} transactions", 
+                _logger.LogDebug("Retrieved analytics with {Count} transactions",
                     analytics.TryGetValue("totalTransactions", out var count) ? count : 0);
                 return analytics;
             }
@@ -130,7 +130,7 @@ public class Neo4jReactiveDataAccess : INeo4jReactiveDataAccess, IDisposable
                 };
 
                 var results = await _dataAccess.ExecuteQueryAsync(cypher, parameters);
-                
+
                 return results.Select(record => new Transaction
                 {
                     Id = record["id"].ToString() ?? "",
@@ -139,7 +139,7 @@ public class Neo4jReactiveDataAccess : INeo4jReactiveDataAccess, IDisposable
                     Description = record["description"]?.ToString() ?? "",
                     CleanDescription = record["cleanDescription"]?.ToString(),
                     Category = record["category"]?.ToString(),
-                    Status = Enum.TryParse<ProcessingStatus>(record["status"]?.ToString(), out var status) 
+                    Status = Enum.TryParse<ProcessingStatus>(record["status"]?.ToString(), out var status)
                         ? status : ProcessingStatus.Processed
                 }).ToList();
             }

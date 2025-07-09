@@ -34,7 +34,7 @@ public interface INeo4jDataAccess
     /// Executes custom Cypher queries
     /// </summary>
     Task<IEnumerable<IDictionary<string, object>>> ExecuteQueryAsync(
-        string cypher, 
-        object? parameters = null, 
+        string cypher,
+        object? parameters = null,
         CancellationToken cancellationToken = default);
 }

@@ -33,12 +33,12 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
         try
         {
             _logger.LogDebug("Verifying Neo4j connectivity");
-            
+
             // Use async session with modern pattern
             await using var session = _driver.AsyncSession(o => o
                 .WithDatabase(_settings.Database)
                 .WithDefaultAccessMode(AccessMode.Read));
-                
+
             var result = await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync("RETURN 1 AS test", null);
@@ -47,7 +47,7 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
             }, txConfig => txConfig
                 .WithTimeout(TimeSpan.FromSeconds(5))
                 .WithMetadata(new Dictionary<string, object> { ["operation"] = "connectivity_check" }));
-                
+
             _logger.LogInformation("Neo4j connectivity verified successfully");
             return result == 1;
         }
@@ -118,8 +118,8 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
                 return Task.CompletedTask;
             }, txConfig => txConfig
                 .WithTimeout(TimeSpan.FromMinutes(2))
-                .WithMetadata(new Dictionary<string, object> 
-                { 
+                .WithMetadata(new Dictionary<string, object>
+                {
                     ["operation"] = "schema_initialization",
                     ["version"] = GetDatabaseVersion()
                 }));
@@ -236,7 +236,7 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
             await using var session = _driver.AsyncSession(o => o
                 .WithDatabase(_settings.Database)
                 .WithDefaultAccessMode(AccessMode.Write));
-            
+
             var result = await session.ExecuteWriteAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(cypher, parameters);
@@ -244,10 +244,10 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
                 return record["transactionId"].As<string>();
             }, txConfig => txConfig
                 .WithTimeout(TimeSpan.FromSeconds(30))
-                .WithMetadata(new Dictionary<string, object> 
-                { 
+                .WithMetadata(new Dictionary<string, object>
+                {
                     ["operation"] = "upsert_transaction",
-                    ["transactionId"] = transaction.Id 
+                    ["transactionId"] = transaction.Id
                 }));
 
             _logger.LogDebug("Successfully upserted transaction {TransactionId} with relationships", transaction.Id);
@@ -302,21 +302,21 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
             await using var session = _driver.AsyncSession(o => o
                 .WithDatabase(_settings.Database)
                 .WithDefaultAccessMode(AccessMode.Read));
-            
+
             return await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(cypher, null);
                 var record = await cursor.SingleAsync();
                 var analytics = record["analytics"].As<IDictionary<string, object>>();
-                
-                _logger.LogDebug("Retrieved transaction analytics with {Count} total transactions", 
+
+                _logger.LogDebug("Retrieved transaction analytics with {Count} total transactions",
                     analytics.TryGetValue("totalTransactions", out var count) ? count : 0);
-                    
+
                 return analytics;
             }, txConfig => txConfig
                 .WithTimeout(TimeSpan.FromSeconds(30))
-                .WithMetadata(new Dictionary<string, object> 
-                { 
+                .WithMetadata(new Dictionary<string, object>
+                {
                     ["operation"] = "get_analytics"
                 }));
         }
@@ -328,8 +328,8 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
     }
 
     public async Task<IEnumerable<IDictionary<string, object>>> ExecuteQueryAsync(
-        string cypher, 
-        object? parameters = null, 
+        string cypher,
+        object? parameters = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -337,7 +337,7 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
             await using var session = _driver.AsyncSession(o => o
                 .WithDatabase(_settings.Database)
                 .WithDefaultAccessMode(AccessMode.Read));
-            
+
             return await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(cypher, parameters);
@@ -345,8 +345,8 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
                 return records.Select(record => record.Keys.ToDictionary(key => key, key => record[key].As<object>())).ToList();
             }, txConfig => txConfig
                 .WithTimeout(TimeSpan.FromMinutes(5))
-                .WithMetadata(new Dictionary<string, object> 
-                { 
+                .WithMetadata(new Dictionary<string, object>
+                {
                     ["operation"] = "custom_query",
                     ["query_preview"] = cypher.Substring(0, Math.Min(cypher.Length, 100))
                 }));
@@ -376,7 +376,7 @@ public class Neo4jDataAccess : INeo4jDataAccess, IAsyncDisposable
             await using var session = _driver.AsyncSession(o => o
                 .WithDatabase(_settings.Database)
                 .WithDefaultAccessMode(AccessMode.Read));
-            
+
             return await session.ExecuteReadAsync(async tx =>
             {
                 var cursor = await tx.RunAsync(basicCypher, null);

@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Neo4j.Driver;
+using NUnit.Framework;
+using System.Linq;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Services;
@@ -13,6 +15,7 @@ namespace TransactionProcessingSystem.Tests.UnitTests;
 /// Comprehensive unit tests for the modernized Neo4jDataAccess implementation
 /// Tests latest C# features including IAsyncEnumerable, ValueTask, and modern patterns
 /// </summary>
+[TestFixture]
 public class Neo4jDataAccessTests : IDisposable
 {
     private readonly Mock<IDriver> _mockDriver;
@@ -53,7 +56,7 @@ public class Neo4jDataAccessTests : IDisposable
         _dataAccess = new Neo4jDataAccess(_mockDriver.Object, _options, _mockLogger.Object);
     }
 
-    [Fact]
+    [Test]
     public async Task VerifyConnectivityAsync_ShouldReturnTrue_WhenConnectionSucceeds()
     {
         // Arrange
@@ -78,7 +81,7 @@ public class Neo4jDataAccessTests : IDisposable
         _mockDriver.Verify(d => d.AsyncSession(It.IsAny<Action<SessionConfigBuilder>>()), Times.Once);
     }
 
-    [Fact]
+    [Test]
     public async Task VerifyConnectivityAsync_ShouldReturnFalse_WhenConnectionFails()
     {
         // Arrange
@@ -93,7 +96,7 @@ public class Neo4jDataAccessTests : IDisposable
         result.Should().BeFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task UpsertTransactionAsync_ShouldReturnTransactionId_WhenSuccessful()
     {
         // Arrange
@@ -121,7 +124,7 @@ public class Neo4jDataAccessTests : IDisposable
         _mockTransaction.Verify(t => t.RunAsync(It.IsAny<string>(), It.IsAny<object>()), Times.Once);
     }
 
-    [Fact]
+    [Test]
     public async Task UpsertTransactionsAsync_ShouldStreamResults_UsingIAsyncEnumerable()
     {
         // Arrange
@@ -142,7 +145,7 @@ public class Neo4jDataAccessTests : IDisposable
         results.Select(r => r.TransactionId).Should().BeEquivalentTo(transactions.Select(t => t.Id));
     }
 
-    [Fact]
+    [Test]
     public async Task FindSimilarTransactionsAsync_ShouldStreamSimilarTransactions_UsingModernPatterns()
     {
         // Arrange
@@ -167,7 +170,7 @@ public class Neo4jDataAccessTests : IDisposable
         });
     }
 
-    [Fact]
+    [Test]
     public async Task GetTransactionAnalyticsAsync_ShouldReturnStronglyTypedAnalytics_WithModernRecords()
     {
         // Arrange
@@ -187,7 +190,7 @@ public class Neo4jDataAccessTests : IDisposable
         analytics.Relationships.Should().NotBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteQueryAsync_ShouldStreamResults_UsingIAsyncEnumerable()
     {
         // Arrange
@@ -207,7 +210,7 @@ public class Neo4jDataAccessTests : IDisposable
         results.Should().AllSatisfy(r => r.Should().ContainKey("id"));
     }
 
-    [Fact]
+    [Test]
     public async Task GetGraphStatisticsAsync_ShouldStreamStatistics_WithModernRecordStructs()
     {
         // Arrange
@@ -228,7 +231,7 @@ public class Neo4jDataAccessTests : IDisposable
         statistics.Should().AllSatisfy(s => s.Count.Should().BeGreaterThan(0));
     }
 
-    [Fact]
+    [Test]
     public async Task InitializeDatabaseAsync_ShouldExecuteConstraintsAndIndexes_WithModernCollectionSyntax()
     {
         // Arrange
@@ -253,7 +256,7 @@ public class Neo4jDataAccessTests : IDisposable
         executedStatements.Should().Contain(s => s.Contains("CREATE FULLTEXT INDEX"));
     }
 
-    [Fact]
+    [Test]
     public async Task DisposeAsync_ShouldDisposeDriver_WithModernAsyncDisposalPattern()
     {
         // Act
@@ -263,10 +266,9 @@ public class Neo4jDataAccessTests : IDisposable
         _mockDriver.Verify(d => d.DisposeAsync(), Times.Once);
     }
 
-    [Theory]
-    [InlineData("", "Unknown")]
-    [InlineData(null, "Unknown")]
-    [InlineData("Food & Dining", "Food & Dining")]
+    [TestCase("", "Unknown")]
+    [TestCase(null, "Unknown")]
+    [TestCase("Food & Dining", "Food & Dining")]
     public async Task UpsertTransactionAsync_ShouldHandleNullableCategories_WithModernNullHandling(string? category, string expectedCategory)
     {
         // Arrange
@@ -448,4 +450,4 @@ public class Neo4jDataAccessTests : IDisposable
     {
         _dataAccess?.DisposeAsync().AsTask().Wait();
     }
-}
+} 

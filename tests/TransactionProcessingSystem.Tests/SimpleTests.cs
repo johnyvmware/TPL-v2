@@ -1,12 +1,13 @@
 using FluentAssertions;
+using NUnit.Framework;
 using TransactionProcessingSystem.Models;
-using Xunit;
 
 namespace TransactionProcessingSystem.Tests;
 
+[TestFixture]
 public class SimpleTests
 {
-    [Fact]
+    [Test]
     public void Transaction_Constructor_CreatesValidTransaction()
     {
         // Arrange & Act

@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NUnit.Framework;
+using System.Linq;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Processors;
 using TransactionProcessingSystem.Services;
@@ -11,6 +13,7 @@ namespace TransactionProcessingSystem.Tests.UnitTests;
 /// Comprehensive unit tests for the modernized Neo4jProcessor
 /// Tests latest C# features including primary constructors, IAsyncEnumerable, and ValueTask patterns
 /// </summary>
+[TestFixture]
 public class Neo4jProcessorTests
 {
     private readonly Mock<INeo4jDataAccess> _mockDataAccess;
@@ -24,7 +27,7 @@ public class Neo4jProcessorTests
         _processor = new Neo4jProcessor(_mockDataAccess.Object, _mockLogger.Object);
     }
 
-    [Fact]
+    [Test]
     public async Task ProcessItemAsync_ShouldReturnProcessedTransaction_WhenSuccessful()
     {
         // Arrange
@@ -45,7 +48,7 @@ public class Neo4jProcessorTests
         _mockDataAccess.Verify(d => d.UpsertTransactionAsync(transaction, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
+    [Test]
     public async Task ProcessItemAsync_ShouldReturnFailedTransaction_WhenExceptionOccurs()
     {
         // Arrange
@@ -64,7 +67,7 @@ public class Neo4jProcessorTests
         result.Status.Should().Be(ProcessingStatus.Failed);
     }
 
-    [Fact]
+    [Test]
     public async Task ProcessTransactionsBatchAsync_ShouldStreamResults_UsingIAsyncEnumerable()
     {
         // Arrange
@@ -88,7 +91,7 @@ public class Neo4jProcessorTests
         results.Should().AllSatisfy(r => r.Status.Should().Be(ProcessingStatus.Processed));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeTransactionPatternsAsync_ShouldReturnAnalytics_WithValueTaskPerformance()
     {
         // Arrange
@@ -106,7 +109,7 @@ public class Neo4jProcessorTests
         _mockDataAccess.Verify(d => d.GetTransactionAnalyticsAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
+    [Test]
     public async Task FindSimilarTransactionsAsync_ShouldStreamSimilarTransactions_WithEnumeratorCancellation()
     {
         // Arrange
@@ -131,7 +134,7 @@ public class Neo4jProcessorTests
         results.Should().BeEquivalentTo(similarTransactions);
     }
 
-    [Fact]
+    [Test]
     public async Task GetGraphStatisticsAsync_ShouldStreamStatistics_WithModernAsyncPatterns()
     {
         // Arrange
@@ -154,7 +157,7 @@ public class Neo4jProcessorTests
         results.Should().BeEquivalentTo(expectedStatistics);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteCustomAnalyticsAsync_ShouldStreamResults_WithoutYieldInTryCatch()
     {
         // Arrange
@@ -178,7 +181,7 @@ public class Neo4jProcessorTests
         results.Should().BeEquivalentTo(expectedResults);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteCustomAnalyticsAsync_ShouldHandleExceptions_WithoutYieldInTryCatch()
     {
         // Arrange
@@ -200,7 +203,7 @@ public class Neo4jProcessorTests
         exception.Message.Should().Be("Invalid query");
     }
 
-    [Fact]
+    [Test]
     public async Task InitializeAsync_ShouldVerifyConnectivityAndInitializeDatabase_WithModernAsyncPatterns()
     {
         // Arrange
@@ -213,14 +216,14 @@ public class Neo4jProcessorTests
             .Returns(ValueTask.CompletedTask);
 
         // Act
-        await _processor.InitializeAsync();
+        await _processor.InitializeAsync(CancellationToken.None);
 
         // Assert
         _mockDataAccess.Verify(d => d.VerifyConnectivityAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockDataAccess.Verify(d => d.InitializeDatabaseAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
+    [Test]
     public async Task InitializeAsync_ShouldThrowException_WhenConnectivityFails()
     {
         // Arrange
@@ -230,15 +233,14 @@ public class Neo4jProcessorTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _processor.InitializeAsync().AsTask());
+            () => _processor.InitializeAsync(CancellationToken.None).AsTask());
 
         exception.Message.Should().Contain("Failed to connect to Neo4j database");
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(5)]
-    [InlineData(10)]
+    [TestCase(1)]
+    [TestCase(5)]
+    [TestCase(10)]
     public async Task ProcessTransactionsBatchAsync_ShouldHandleDifferentBatchSizes_WithModernCollectionSyntax(int batchSize)
     {
         // Arrange
@@ -262,7 +264,7 @@ public class Neo4jProcessorTests
         results.Should().AllSatisfy(r => r.Status.Should().Be(ProcessingStatus.Processed));
     }
 
-    [Fact]
+    [Test]
     public async Task ProcessItemAsync_ShouldLogDebugAndTrace_WithStructuredLogging()
     {
         // Arrange
@@ -273,7 +275,7 @@ public class Neo4jProcessorTests
             .ReturnsAsync(transaction.Id);
 
         // Act
-        await _processor.ProcessItemAsync(transaction);
+        await _processor.ProcessItemAsync(transaction, CancellationToken.None);
 
         // Assert
         _mockLogger.Verify(
@@ -295,7 +297,7 @@ public class Neo4jProcessorTests
             Times.Once);
     }
 
-    [Fact]
+    [Test]
     public async Task ProcessTransactionsBatchAsync_ShouldHandleFailedTransactions_WithProperStatusMapping()
     {
         // Arrange
@@ -326,7 +328,7 @@ public class Neo4jProcessorTests
         results[2].Status.Should().Be(ProcessingStatus.Processed);
     }
 
-    [Fact]
+    [Test]
     public async Task CancellationToken_ShouldBePropagatedThroughAsyncEnumerables()
     {
         // Arrange
@@ -336,19 +338,21 @@ public class Neo4jProcessorTests
 
         _mockDataAccess
             .Setup(d => d.UpsertTransactionsAsync(It.IsAny<IAsyncEnumerable<Transaction>>(), It.IsAny<CancellationToken>()))
-            .Returns(async IAsyncEnumerable < TransactionResult > GetResults()
-            {
+            .Returns(GetResults());
+
+        async IAsyncEnumerable<TransactionResult> GetResults()
+        {
             foreach (var transaction in transactions)
             {
                 await Task.Delay(20, cts.Token); // Simulate work
                 yield return new TransactionResult(transaction.Id, true);
             }
-        });
+        }
 
         var results = new List<Transaction>();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
             await foreach (var result in _processor.ProcessTransactionsBatchAsync(transactions.ToAsyncEnumerable(), cts.Token))
             {
@@ -419,4 +423,4 @@ public class Neo4jProcessorTests
             })
             .Cast<IDictionary<string, object>>()
             .ToList();
-}
+} 

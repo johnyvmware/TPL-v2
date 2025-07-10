@@ -29,10 +29,10 @@ public record MicrosoftGraphSecrets
 {
     [Required]
     public required string ClientId { get; init; }
-    
+
     [Required]
     public required string ClientSecret { get; init; }
-    
+
     [Required]
     public required string TenantId { get; init; }
 }
@@ -44,10 +44,10 @@ public record Neo4jSecrets
 {
     [Required]
     public required string ConnectionUri { get; init; }
-    
+
     [Required]
     public required string Username { get; init; }
-    
+
     [Required]
     public required string Password { get; init; }
-} 
+}

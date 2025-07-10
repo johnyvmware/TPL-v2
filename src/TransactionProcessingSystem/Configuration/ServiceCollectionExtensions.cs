@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
         {
             var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
-            
+
             return new Neo4jConfiguration
             {
                 Settings = neo4jSettings,

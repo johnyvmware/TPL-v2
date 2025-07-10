@@ -49,7 +49,7 @@ try
 {
     var neo4jConfig = host.Services.GetRequiredService<Neo4jConfiguration>();
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    
+
     if (neo4jConfig.IsValid)
     {
         logger.LogInformation("Neo4j configuration validated successfully. Connected to: {ConnectionUri} Database: {Database}",
@@ -60,7 +60,7 @@ try
         logger.LogError("Neo4j configuration is invalid. Please check your secrets configuration.");
         throw new InvalidOperationException("Invalid Neo4j configuration");
     }
-    
+
     // Validate other configurations
     var appSettings = host.Services.GetRequiredService<IOptions<AppSettings>>().Value;
     logger.LogInformation("Application configuration loaded successfully. Transaction API: {BaseUrl}",

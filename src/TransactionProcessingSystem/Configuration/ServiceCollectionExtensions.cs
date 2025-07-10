@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
     {
         // Configure Neo4j settings with validation
         services.Configure<Neo4jSettings>(configuration.GetSection("Neo4j"));
-        
+
         // Add validation for the settings
         services.AddSingleton<IValidateOptions<Neo4jSettings>, Neo4jSettingsValidator>();
 
@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
             }
 
             var authToken = AuthTokens.Basic(settings.Username, settings.Password);
-            
+
             var driver = GraphDatabase.Driver(settings.ConnectionUri, authToken, config =>
             {
                 config.WithMaxConnectionPoolSize(settings.MaxConnectionPoolSize)
@@ -78,4 +78,4 @@ public class Neo4jSettingsValidator : IValidateOptions<Neo4jSettings>
 
         return ValidateOptionsResult.Success;
     }
-} 
+}

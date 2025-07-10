@@ -40,7 +40,7 @@ try
 {
     var neo4jSettings = host.Services.GetRequiredService<IOptions<Neo4jSettings>>().Value;
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Neo4j configuration validated successfully. Connected to: {ConnectionUri}", 
+    logger.LogInformation("Neo4j configuration validated successfully. Connected to: {ConnectionUri}",
         neo4jSettings.ConnectionUri);
 }
 catch (Exception ex)

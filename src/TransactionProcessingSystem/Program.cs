@@ -10,12 +10,21 @@ using TransactionProcessingSystem.Processors;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// Configure User Secrets for development environment
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
 // Logging
 builder.Services.AddLogging(logging =>
 {
     logging.AddConsole();
     logging.SetMinimumLevel(LogLevel.Information);
 });
+
+// Add application configuration (settings + secrets)
+builder.Services.AddApplicationConfiguration(builder.Configuration);
 
 // Add Neo4j services with modern configuration
 builder.Services.AddNeo4jServices(builder.Configuration);
@@ -38,15 +47,29 @@ var host = builder.Build();
 // Validate configuration at startup
 try
 {
-    var neo4jSettings = host.Services.GetRequiredService<IOptions<Neo4jSettings>>().Value;
+    var neo4jConfig = host.Services.GetRequiredService<Neo4jConfiguration>();
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Neo4j configuration validated successfully. Connected to: {ConnectionUri}",
-        neo4jSettings.ConnectionUri);
+    
+    if (neo4jConfig.IsValid)
+    {
+        logger.LogInformation("Neo4j configuration validated successfully. Connected to: {ConnectionUri} Database: {Database}",
+            neo4jConfig.ConnectionUri, neo4jConfig.Database);
+    }
+    else
+    {
+        logger.LogError("Neo4j configuration is invalid. Please check your secrets configuration.");
+        throw new InvalidOperationException("Invalid Neo4j configuration");
+    }
+    
+    // Validate other configurations
+    var appSettings = host.Services.GetRequiredService<IOptions<AppSettings>>().Value;
+    logger.LogInformation("Application configuration loaded successfully. Transaction API: {BaseUrl}",
+        appSettings.TransactionApi.BaseUrl);
 }
 catch (Exception ex)
 {
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "Failed to validate Neo4j configuration");
+    logger.LogError(ex, "Failed to validate application configuration");
     throw;
 }
 

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Azure.Identity;
 using TransactionProcessingSystem.Configuration;
@@ -11,15 +12,18 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
 {
     private readonly GraphServiceClient _graphClient;
     private readonly MicrosoftGraphSettings _settings;
+    private readonly MicrosoftGraphSecrets _secrets;
     private static readonly Regex AmountRegex = new(@"\$?(\d+(?:\.\d{2})?)", RegexOptions.Compiled);
 
     public EmailEnricher(
-        MicrosoftGraphSettings settings,
+        IOptions<MicrosoftGraphSettings> settings,
+        IOptions<MicrosoftGraphSecrets> secrets,
         ILogger<EmailEnricher> logger,
         int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {
-        _settings = settings;
+        _settings = settings.Value;
+        _secrets = secrets.Value;
         _graphClient = CreateGraphClient();
     }
 
@@ -64,9 +68,9 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         try
         {
             var credential = new ClientSecretCredential(
-                _settings.TenantId,
-                _settings.ClientId,
-                _settings.ClientSecret);
+                _secrets.TenantId,
+                _secrets.ClientId,
+                _secrets.ClientSecret);
 
             return new GraphServiceClient(credential);
         }

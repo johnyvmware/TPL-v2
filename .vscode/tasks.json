@@ -1,0 +1,55 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "build",
+			"command": "dotnet",
+			"args": ["build", "src/TransactionProcessingSystem/TransactionProcessingSystem.csproj"],
+			"group": "build",
+			"problemMatcher": ["$msCompile"]
+		},
+		{
+			"type": "shell",
+			"label": "build-release",
+			"command": "dotnet",
+			"args": ["build", "src/TransactionProcessingSystem/TransactionProcessingSystem.csproj", "--configuration", "Release"],
+			"group": "build",
+			"problemMatcher": ["$msCompile"]
+		},
+		{
+			"type": "shell",
+			"label": "🚀 Run Development",
+			"command": "dotnet",
+			"args": ["run", "--project", "src/TransactionProcessingSystem/TransactionProcessingSystem.csproj"],
+			"group": "build",
+			"options": {
+				"env": {
+					"ASPNETCORE_ENVIRONMENT": "Development"
+				}
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "🏭 Run Production",
+			"command": "dotnet",
+			"args": ["run", "--project", "src/TransactionProcessingSystem/TransactionProcessingSystem.csproj", "--configuration", "Release"],
+			"group": "build",
+			"options": {
+				"env": {
+					"ASPNETCORE_ENVIRONMENT": "Production"
+				}
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "🧪 Run Tests",
+			"command": "dotnet",
+			"args": ["test", "tests/TransactionProcessingSystem.Tests/TransactionProcessingSystem.Tests.csproj"],
+			"group": "test",
+			"problemMatcher": []
+		}
+	]
+}

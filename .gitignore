@@ -39,7 +39,7 @@ ScaffoldingReadMe.txt
 # Others
 ~$*
 # VS Code settings (user/workspace specific)
-.vscode/
+.vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json
 

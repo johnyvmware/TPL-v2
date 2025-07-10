@@ -4,29 +4,10 @@ namespace TransactionProcessingSystem.Configuration;
 
 /// <summary>
 /// Configuration settings for Neo4j database connection and behavior.
-/// Supports binding from appsettings.json and user secrets.
+/// Secret values (URI, username, password) are bound separately via SecretsSettings.
 /// </summary>
 public record Neo4jSettings
 {
-    /// <summary>
-    /// The Neo4j connection URI (e.g., neo4j+s://your-instance.databases.neo4j.io)
-    /// </summary>
-    [Required]
-    [Url]
-    public required string ConnectionUri { get; init; }
-
-    /// <summary>
-    /// Username for Neo4j authentication
-    /// </summary>
-    [Required]
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Password for Neo4j authentication
-    /// </summary>
-    [Required]
-    public required string Password { get; init; }
-
     /// <summary>
     /// Target database name
     /// </summary>
@@ -49,11 +30,32 @@ public record Neo4jSettings
     /// </summary>
     [Range(1, 300)]
     public int MaxTransactionRetryTimeSeconds { get; init; } = 30;
+}
+
+/// <summary>
+/// Combined Neo4j configuration that includes both settings and secrets
+/// </summary>
+public record Neo4jConfiguration
+{
+    public required Neo4jSettings Settings { get; init; }
+    public required Neo4jSecrets Secrets { get; init; }
+
+    /// <summary>
+    /// Convenience properties for driver configuration
+    /// </summary>
+    public string ConnectionUri => Secrets.ConnectionUri;
+    public string Username => Secrets.Username;
+    public string Password => Secrets.Password;
+    public string Database => Settings.Database;
+    public int MaxConnectionPoolSize => Settings.MaxConnectionPoolSize;
+    public int ConnectionTimeoutSeconds => Settings.ConnectionTimeoutSeconds;
+    public int MaxTransactionRetryTimeSeconds => Settings.MaxTransactionRetryTimeSeconds;
 
     /// <summary>
     /// Validates the configuration settings
     /// </summary>
     public bool IsValid => !string.IsNullOrWhiteSpace(ConnectionUri) &&
                           !string.IsNullOrWhiteSpace(Username) &&
-                          !string.IsNullOrWhiteSpace(Password);
+                          !string.IsNullOrWhiteSpace(Password) &&
+                          Uri.TryCreate(ConnectionUri, UriKind.Absolute, out _);
 }

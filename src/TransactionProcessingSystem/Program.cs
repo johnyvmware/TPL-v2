@@ -45,7 +45,7 @@ static Task ValidateConfigurationAsync(IServiceProvider services)
         // Validate Neo4j configuration with IValidateOptions
         var neo4jConfig = services.GetRequiredService<IOptions<Neo4jConfiguration>>();
         var neo4jValidator = services.GetRequiredService<IValidateOptions<Neo4jConfiguration>>();
-        
+
         var validationResult = neo4jValidator.Validate(Options.DefaultName, neo4jConfig.Value);
         if (validationResult.Failed)
         {
@@ -54,13 +54,13 @@ static Task ValidateConfigurationAsync(IServiceProvider services)
             throw new InvalidOperationException($"Neo4j configuration validation failed: {errors}");
         }
 
-        logger.LogInformation("Neo4j configuration validated successfully. Database: {Database}", 
+        logger.LogInformation("Neo4j configuration validated successfully. Database: {Database}",
             neo4jConfig.Value.Database);
 
         // Validate application settings
         var appSettings = services.GetRequiredService<IOptions<AppSettings>>();
         var appValidator = services.GetRequiredService<IValidateOptions<AppSettings>>();
-        
+
         var appValidationResult = appValidator.Validate(Options.DefaultName, appSettings.Value);
         if (appValidationResult.Failed)
         {
@@ -75,7 +75,7 @@ static Task ValidateConfigurationAsync(IServiceProvider services)
         // Validate secrets
         var secrets = services.GetRequiredService<IOptions<SecretsSettings>>();
         var secretsValidator = services.GetRequiredService<IValidateOptions<SecretsSettings>>();
-        
+
         var secretsValidationResult = secretsValidator.Validate(Options.DefaultName, secrets.Value);
         if (secretsValidationResult.Failed)
         {

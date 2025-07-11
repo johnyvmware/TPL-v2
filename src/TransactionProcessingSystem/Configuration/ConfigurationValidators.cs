@@ -62,7 +62,7 @@ public sealed class AppSettingsValidator : IValidateOptions<AppSettings>
         if (options.Pipeline.TimeoutMinutes <= 0)
             failures.Add("Pipeline.TimeoutMinutes must be greater than 0");
 
-        return failures.Count > 0 
+        return failures.Count > 0
             ? ValidateOptionsResult.Fail(failures)
             : ValidateOptionsResult.Success;
     }
@@ -114,7 +114,7 @@ public sealed class SecretsSettingsValidator : IValidateOptions<SecretsSettings>
             }
         }
 
-        return failures.Count > 0 
+        return failures.Count > 0
             ? ValidateOptionsResult.Fail(failures)
             : ValidateOptionsResult.Success;
     }
@@ -212,7 +212,7 @@ public sealed class Neo4jConfigurationValidator : IValidateOptions<Neo4jConfigur
         if (options.MaxTransactionRetryTimeSeconds <= 0 || options.MaxTransactionRetryTimeSeconds > 300)
             failures.Add("Neo4j MaxTransactionRetryTimeSeconds must be between 1 and 300");
 
-        return failures.Count > 0 
+        return failures.Count > 0
             ? ValidateOptionsResult.Fail(failures)
             : ValidateOptionsResult.Success;
     }

@@ -120,7 +120,7 @@ public static class ServiceCollectionExtensions
 
         // Other transaction processing services can be added here
         // Example: services.AddScoped<ITransactionValidator, TransactionValidator>();
-        
+
         return services;
     }
 }

@@ -12,6 +12,7 @@ public record AppSettings
     public required TransactionApiSettings TransactionApi { get; init; }
     public required ExportSettings Export { get; init; }
     public required PipelineSettings Pipeline { get; init; }
+    public required Neo4jSettings Neo4j { get; init; }
 }
 
 /// <summary>

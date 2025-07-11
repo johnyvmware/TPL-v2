@@ -42,20 +42,32 @@ static Task ValidateConfigurationAsync(IServiceProvider services)
     {
         logger.LogInformation("Validating application configuration...");
 
-        // Validate Neo4j configuration with IValidateOptions
-        var neo4jConfig = services.GetRequiredService<IOptions<Neo4jConfiguration>>();
-        var neo4jValidator = services.GetRequiredService<IValidateOptions<Neo4jConfiguration>>();
+        // Validate Neo4j settings
+        var neo4jSettings = services.GetRequiredService<IOptions<Neo4jSettings>>();
+        var neo4jSettingsValidator = services.GetRequiredService<IValidateOptions<Neo4jSettings>>();
 
-        var validationResult = neo4jValidator.Validate(Options.DefaultName, neo4jConfig.Value);
-        if (validationResult.Failed)
+        var neo4jSettingsResult = neo4jSettingsValidator.Validate(Options.DefaultName, neo4jSettings.Value);
+        if (neo4jSettingsResult.Failed)
         {
-            var errors = string.Join(", ", validationResult.Failures);
-            logger.LogError("Neo4j configuration validation failed: {Errors}", errors);
-            throw new InvalidOperationException($"Neo4j configuration validation failed: {errors}");
+            var errors = string.Join(", ", neo4jSettingsResult.Failures);
+            logger.LogError("Neo4j settings validation failed: {Errors}", errors);
+            throw new InvalidOperationException($"Neo4j settings validation failed: {errors}");
+        }
+
+        // Validate Neo4j secrets
+        var neo4jSecrets = services.GetRequiredService<IOptions<Neo4jSecrets>>();
+        var neo4jSecretsValidator = services.GetRequiredService<IValidateOptions<Neo4jSecrets>>();
+
+        var neo4jSecretsResult = neo4jSecretsValidator.Validate(Options.DefaultName, neo4jSecrets.Value);
+        if (neo4jSecretsResult.Failed)
+        {
+            var errors = string.Join(", ", neo4jSecretsResult.Failures);
+            logger.LogError("Neo4j secrets validation failed: {Errors}", errors);
+            throw new InvalidOperationException($"Neo4j secrets validation failed: {errors}");
         }
 
         logger.LogInformation("Neo4j configuration validated successfully. Database: {Database}",
-            neo4jConfig.Value.Database);
+            neo4jSettings.Value.Database);
 
         // Validate application settings
         var appSettings = services.GetRequiredService<IOptions<AppSettings>>();

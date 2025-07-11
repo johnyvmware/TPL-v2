@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
         services.Configure<TransactionApiSettings>(configuration.GetSection("TransactionApi"));
         services.Configure<ExportSettings>(configuration.GetSection("Export"));
         services.Configure<PipelineSettings>(configuration.GetSection("Pipeline"));
+        services.Configure<Neo4jSettings>(configuration.GetSection("Neo4j"));
 
         // Configure secrets separately (from User Secrets in dev, Environment Variables in prod)
         services.Configure<SecretsSettings>(configuration);
@@ -32,13 +33,21 @@ public static class ServiceCollectionExtensions
         services.Configure<MicrosoftGraphSecrets>(configuration.GetSection("Secrets:MicrosoftGraph"));
         services.Configure<Neo4jSecrets>(configuration.GetSection("Secrets:Neo4j"));
 
-        // Configure Neo4j settings separately to follow SRP
-        services.Configure<Neo4jSettings>(configuration.GetSection("Neo4j"));
+        // Register all individual validators
+        services.AddSingleton<IValidateOptions<OpenAISettings>, OpenAISettingsValidator>();
+        services.AddSingleton<IValidateOptions<MicrosoftGraphSettings>, MicrosoftGraphSettingsValidator>();
+        services.AddSingleton<IValidateOptions<TransactionApiSettings>, TransactionApiSettingsValidator>();
+        services.AddSingleton<IValidateOptions<ExportSettings>, ExportSettingsValidator>();
+        services.AddSingleton<IValidateOptions<PipelineSettings>, PipelineSettingsValidator>();
+        services.AddSingleton<IValidateOptions<Neo4jSettings>, Neo4jSettingsValidator>();
 
-        // Register all validators for comprehensive startup validation
+        services.AddSingleton<IValidateOptions<OpenAISecrets>, OpenAISecretsValidator>();
+        services.AddSingleton<IValidateOptions<MicrosoftGraphSecrets>, MicrosoftGraphSecretsValidator>();
+        services.AddSingleton<IValidateOptions<Neo4jSecrets>, Neo4jSecretsValidator>();
+
+        // Register composite validators that handle all nested settings gracefully
         services.AddSingleton<IValidateOptions<AppSettings>, AppSettingsValidator>();
         services.AddSingleton<IValidateOptions<SecretsSettings>, SecretsSettingsValidator>();
-        services.AddSingleton<IValidateOptions<Neo4jSettings>, Neo4jSettingsValidator>();
 
         return services;
     }
@@ -49,48 +58,28 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddNeo4jBootstrap(this IServiceCollection services, IConfiguration configuration)
     {
-        // Register Neo4jConfiguration factory for direct resolution and IOptions pattern
-        services.AddSingleton<Neo4jConfiguration>(serviceProvider =>
+        // Register Neo4j Driver as singleton with proper configuration
+        services.AddSingleton<IDriver>(serviceProvider =>
         {
             var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
 
-            return new Neo4jConfiguration
-            {
-                Settings = neo4jSettings,
-                Secrets = neo4jSecrets
-            };
-        });
-
-        // Register for IOptions<Neo4jConfiguration> pattern using the singleton factory
-        services.AddSingleton<IOptions<Neo4jConfiguration>>(serviceProvider =>
-        {
-            var config = serviceProvider.GetRequiredService<Neo4jConfiguration>();
-            return Options.Create(config);
-        });
-
-        // Register validator for Neo4jConfiguration
-        services.AddSingleton<IValidateOptions<Neo4jConfiguration>, Neo4jConfigurationValidator>();
-
-        // Register Neo4j Driver as singleton with proper configuration
-        services.AddSingleton<IDriver>(serviceProvider =>
-        {
-            var neo4jConfig = serviceProvider.GetRequiredService<Neo4jConfiguration>();
-
-            // Validation is handled by IValidateOptions, but we still check IsValid for safety
-            if (!neo4jConfig.IsValid)
+            // Basic validation - detailed validation is handled by IValidateOptions
+            if (string.IsNullOrWhiteSpace(neo4jSecrets.ConnectionUri) ||
+                string.IsNullOrWhiteSpace(neo4jSecrets.Username) ||
+                string.IsNullOrWhiteSpace(neo4jSecrets.Password))
             {
                 throw new InvalidOperationException(
                     "Neo4j configuration is invalid. Please check ConnectionUri, Username, and Password in your secrets configuration.");
             }
 
-            var authToken = AuthTokens.Basic(neo4jConfig.Username, neo4jConfig.Password);
+            var authToken = AuthTokens.Basic(neo4jSecrets.Username, neo4jSecrets.Password);
 
-            var driver = GraphDatabase.Driver(neo4jConfig.ConnectionUri, authToken, config =>
+            var driver = GraphDatabase.Driver(neo4jSecrets.ConnectionUri, authToken, config =>
             {
-                config.WithMaxConnectionPoolSize(neo4jConfig.MaxConnectionPoolSize)
-                      .WithConnectionTimeout(TimeSpan.FromSeconds(neo4jConfig.ConnectionTimeoutSeconds))
-                      .WithMaxTransactionRetryTime(TimeSpan.FromSeconds(neo4jConfig.MaxTransactionRetryTimeSeconds));
+                config.WithMaxConnectionPoolSize(neo4jSettings.MaxConnectionPoolSize)
+                      .WithConnectionTimeout(TimeSpan.FromSeconds(neo4jSettings.ConnectionTimeoutSeconds))
+                      .WithMaxTransactionRetryTime(TimeSpan.FromSeconds(neo4jSettings.MaxTransactionRetryTimeSeconds));
             });
 
             return driver;

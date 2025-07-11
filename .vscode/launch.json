@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🚀 Development",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/TransactionProcessingSystem/bin/Debug/net8.0/TransactionProcessingSystem.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/TransactionProcessingSystem",
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "DOTNET_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "🏭 Production",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-release", 
+            "program": "${workspaceFolder}/src/TransactionProcessingSystem/bin/Release/net8.0/TransactionProcessingSystem.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/TransactionProcessingSystem",
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Production",
+                "DOTNET_ENVIRONMENT": "Production"
+            }
+        },
+    ]
+}

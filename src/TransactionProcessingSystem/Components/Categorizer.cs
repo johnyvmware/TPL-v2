@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenAI;
 using OpenAI.Chat;
 using System.Text.Json;
@@ -78,13 +79,14 @@ public class Categorizer : ProcessorBase<Transaction, Transaction>
         """;
 
     public Categorizer(
-        OpenAISettings settings,
+        IOptions<OpenAISettings> settings,
+        IOptions<OpenAISecrets> secrets,
         ILogger<Categorizer> logger,
         int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {
-        _settings = settings;
-        _openAIClient = new OpenAIClient(_settings.ApiKey);
+        _settings = settings.Value;
+        _openAIClient = new OpenAIClient(secrets.Value.ApiKey);
     }
 
     protected override async Task<Transaction> ProcessAsync(Transaction transaction)

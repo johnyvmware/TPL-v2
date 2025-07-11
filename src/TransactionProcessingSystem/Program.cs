@@ -17,16 +17,19 @@ var builder = Host.CreateApplicationBuilder(args);
 // Configure application settings and secrets with validation
 builder.Services.AddApplicationConfiguration(builder.Configuration);
 
-// Configure Neo4j with single bootstrap call
-builder.Services.AddNeo4jBootstrap(builder.Configuration);
+// Configure Neo4j services
+builder.Services.AddNeo4jServices(builder.Configuration);
 
-// Add application services
+// Add processors
+builder.Services.AddProcessors();
+
+// Add transaction processing services
 builder.Services.AddTransactionProcessingServices();
 
 var host = builder.Build();
 
 // Validate all configuration at startup
-await ValidateConfigurationAsync(host.Services);
+ValidateConfiguration(host.Services);
 
 // Run the application
 await host.RunAsync();
@@ -34,7 +37,7 @@ await host.RunAsync();
 /// <summary>
 /// Validates all configuration and secrets at startup with proper error handling
 /// </summary>
-static Task ValidateConfigurationAsync(IServiceProvider services)
+static void ValidateConfiguration(IServiceProvider services)
 {
     var logger = services.GetRequiredService<ILogger<Program>>();
 
@@ -42,34 +45,7 @@ static Task ValidateConfigurationAsync(IServiceProvider services)
     {
         logger.LogInformation("Validating application configuration...");
 
-        // Validate Neo4j settings
-        var neo4jSettings = services.GetRequiredService<IOptions<Neo4jSettings>>();
-        var neo4jSettingsValidator = services.GetRequiredService<IValidateOptions<Neo4jSettings>>();
-
-        var neo4jSettingsResult = neo4jSettingsValidator.Validate(Options.DefaultName, neo4jSettings.Value);
-        if (neo4jSettingsResult.Failed)
-        {
-            var errors = string.Join(", ", neo4jSettingsResult.Failures);
-            logger.LogError("Neo4j settings validation failed: {Errors}", errors);
-            throw new InvalidOperationException($"Neo4j settings validation failed: {errors}");
-        }
-
-        // Validate Neo4j secrets
-        var neo4jSecrets = services.GetRequiredService<IOptions<Neo4jSecrets>>();
-        var neo4jSecretsValidator = services.GetRequiredService<IValidateOptions<Neo4jSecrets>>();
-
-        var neo4jSecretsResult = neo4jSecretsValidator.Validate(Options.DefaultName, neo4jSecrets.Value);
-        if (neo4jSecretsResult.Failed)
-        {
-            var errors = string.Join(", ", neo4jSecretsResult.Failures);
-            logger.LogError("Neo4j secrets validation failed: {Errors}", errors);
-            throw new InvalidOperationException($"Neo4j secrets validation failed: {errors}");
-        }
-
-        logger.LogInformation("Neo4j configuration validated successfully. Database: {Database}",
-            neo4jSettings.Value.Database);
-
-        // Validate application settings
+        // Validate application settings (includes Neo4j settings validation)
         var appSettings = services.GetRequiredService<IOptions<AppSettings>>();
         var appValidator = services.GetRequiredService<IValidateOptions<AppSettings>>();
 
@@ -84,7 +60,7 @@ static Task ValidateConfigurationAsync(IServiceProvider services)
         logger.LogInformation("Application settings validated successfully. Transaction API: {BaseUrl}",
             appSettings.Value.TransactionApi.BaseUrl);
 
-        // Validate secrets
+        // Validate secrets (includes Neo4j secrets validation)
         var secrets = services.GetRequiredService<IOptions<SecretsSettings>>();
         var secretsValidator = services.GetRequiredService<IValidateOptions<SecretsSettings>>();
 
@@ -103,8 +79,6 @@ static Task ValidateConfigurationAsync(IServiceProvider services)
         logger.LogError(ex, "Configuration validation failed");
         throw;
     }
-
-    return Task.CompletedTask;
 }
 
 /// <summary>

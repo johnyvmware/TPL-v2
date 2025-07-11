@@ -3,7 +3,6 @@ namespace TransactionProcessingSystem.Configuration;
 /// <summary>
 /// Application settings containing non-secret configuration values.
 /// Secrets are handled separately via User Secrets (dev) and Environment Variables (prod).
-/// Neo4j configuration is handled separately to follow SRP.
 /// </summary>
 public record AppSettings
 {

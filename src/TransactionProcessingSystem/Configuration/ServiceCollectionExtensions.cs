@@ -53,25 +53,16 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Single Neo4j bootstrap call that handles everything Neo4j related.
+    /// Adds Neo4j services including driver, data access, and background service.
     /// Follows SRP by keeping all Neo4j concerns together.
     /// </summary>
-    public static IServiceCollection AddNeo4jBootstrap(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddNeo4jServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Register Neo4j Driver as singleton with proper configuration
+        // Register Neo4j Driver as singleton
         services.AddSingleton<IDriver>(serviceProvider =>
         {
             var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
-
-            // Basic validation - detailed validation is handled by IValidateOptions
-            if (string.IsNullOrWhiteSpace(neo4jSecrets.ConnectionUri) ||
-                string.IsNullOrWhiteSpace(neo4jSecrets.Username) ||
-                string.IsNullOrWhiteSpace(neo4jSecrets.Password))
-            {
-                throw new InvalidOperationException(
-                    "Neo4j configuration is invalid. Please check ConnectionUri, Username, and Password in your secrets configuration.");
-            }
 
             var authToken = AuthTokens.Basic(neo4jSecrets.Username, neo4jSecrets.Password);
 
@@ -85,27 +76,37 @@ public static class ServiceCollectionExtensions
             return driver;
         });
 
-        // Register Neo4j services
+        // Register Neo4j data access services
         services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
         services.AddScoped<INeo4jReactiveDataAccess, Neo4jReactiveDataAccess>();
+
+        // Register Neo4j background service
+        services.AddHostedService<Neo4jBackgroundService>();
 
         return services;
     }
 
     /// <summary>
-    /// Adds all transaction processing services including processors, pipeline, and background services.
-    /// Follows SRP by grouping related application services together.
+    /// Adds all processors including Neo4j processor.
+    /// </summary>
+    public static IServiceCollection AddProcessors(this IServiceCollection services)
+    {
+        // Register all processors
+        services.AddScoped<Neo4jProcessor>();
+
+        // Other processors can be added here
+        // Example: services.AddScoped<ValidationProcessor>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds transaction processing services including pipeline and other application services.
     /// </summary>
     public static IServiceCollection AddTransactionProcessingServices(this IServiceCollection services)
     {
-        // Processors
-        services.AddScoped<Neo4jProcessor>();
-
-        // Pipeline
+        // Transaction processing pipeline
         services.AddScoped<TransactionPipeline>();
-
-        // Background Services
-        services.AddHostedService<Neo4jBackgroundService>();
 
         // Other transaction processing services can be added here
         // Example: services.AddScoped<ITransactionValidator, TransactionValidator>();

@@ -1,80 +1,99 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Neo4j.Driver;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Processors;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Configure User Secrets for development environment
-if (builder.Environment.IsDevelopment())
-{
-    builder.Configuration.AddUserSecrets<Program>();
-}
+// Host.CreateApplicationBuilder already handles:
+// - User secrets for development environment
+// - Environment variables for production
+// - Basic configuration sources
+// - Logging configuration from appsettings
 
-// Logging
-builder.Services.AddLogging(logging =>
-{
-    logging.AddConsole();
-    logging.SetMinimumLevel(LogLevel.Information);
-});
-
-// Add application configuration (settings + secrets)
+// Configure application settings and secrets with validation
 builder.Services.AddApplicationConfiguration(builder.Configuration);
 
-// Add Neo4j services with modern configuration
-builder.Services.AddNeo4jServices(builder.Configuration);
+// Configure Neo4j with single bootstrap call
+builder.Services.AddNeo4jBootstrap(builder.Configuration);
 
-// Neo4j Services
-builder.Services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
-builder.Services.AddScoped<INeo4jReactiveDataAccess, Neo4jReactiveDataAccess>();
-
-// Processors
-builder.Services.AddScoped<Neo4jProcessor>();
-
-// Pipeline
-builder.Services.AddScoped<TransactionPipeline>();
-
-// Background Service
-builder.Services.AddHostedService<Neo4jBackgroundService>();
+// Add application services
+builder.Services.AddTransactionProcessingServices();
 
 var host = builder.Build();
 
-// Validate configuration at startup
-try
-{
-    var neo4jConfig = host.Services.GetRequiredService<Neo4jConfiguration>();
-    var logger = host.Services.GetRequiredService<ILogger<Program>>();
-
-    if (neo4jConfig.IsValid)
-    {
-        logger.LogInformation("Neo4j configuration validated successfully. Connected to: {ConnectionUri} Database: {Database}",
-            neo4jConfig.ConnectionUri, neo4jConfig.Database);
-    }
-    else
-    {
-        logger.LogError("Neo4j configuration is invalid. Please check your secrets configuration.");
-        throw new InvalidOperationException("Invalid Neo4j configuration");
-    }
-
-    // Validate other configurations
-    var appSettings = host.Services.GetRequiredService<IOptions<AppSettings>>().Value;
-    logger.LogInformation("Application configuration loaded successfully. Transaction API: {BaseUrl}",
-        appSettings.TransactionApi.BaseUrl);
-}
-catch (Exception ex)
-{
-    var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "Failed to validate application configuration");
-    throw;
-}
+// Validate all configuration at startup
+await ValidateConfigurationAsync(host.Services);
 
 // Run the application
 await host.RunAsync();
+
+/// <summary>
+/// Validates all configuration and secrets at startup with proper error handling
+/// </summary>
+static Task ValidateConfigurationAsync(IServiceProvider services)
+{
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        logger.LogInformation("Validating application configuration...");
+
+        // Validate Neo4j configuration with IValidateOptions
+        var neo4jConfig = services.GetRequiredService<IOptions<Neo4jConfiguration>>();
+        var neo4jValidator = services.GetRequiredService<IValidateOptions<Neo4jConfiguration>>();
+        
+        var validationResult = neo4jValidator.Validate(Options.DefaultName, neo4jConfig.Value);
+        if (validationResult.Failed)
+        {
+            var errors = string.Join(", ", validationResult.Failures);
+            logger.LogError("Neo4j configuration validation failed: {Errors}", errors);
+            throw new InvalidOperationException($"Neo4j configuration validation failed: {errors}");
+        }
+
+        logger.LogInformation("Neo4j configuration validated successfully. Database: {Database}", 
+            neo4jConfig.Value.Database);
+
+        // Validate application settings
+        var appSettings = services.GetRequiredService<IOptions<AppSettings>>();
+        var appValidator = services.GetRequiredService<IValidateOptions<AppSettings>>();
+        
+        var appValidationResult = appValidator.Validate(Options.DefaultName, appSettings.Value);
+        if (appValidationResult.Failed)
+        {
+            var errors = string.Join(", ", appValidationResult.Failures);
+            logger.LogError("Application settings validation failed: {Errors}", errors);
+            throw new InvalidOperationException($"Application settings validation failed: {errors}");
+        }
+
+        logger.LogInformation("Application settings validated successfully. Transaction API: {BaseUrl}",
+            appSettings.Value.TransactionApi.BaseUrl);
+
+        // Validate secrets
+        var secrets = services.GetRequiredService<IOptions<SecretsSettings>>();
+        var secretsValidator = services.GetRequiredService<IValidateOptions<SecretsSettings>>();
+        
+        var secretsValidationResult = secretsValidator.Validate(Options.DefaultName, secrets.Value);
+        if (secretsValidationResult.Failed)
+        {
+            var errors = string.Join(", ", secretsValidationResult.Failures);
+            logger.LogError("Secrets validation failed: {Errors}", errors);
+            throw new InvalidOperationException($"Secrets validation failed: {errors}");
+        }
+
+        logger.LogInformation("All configuration and secrets validated successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Configuration validation failed");
+        throw;
+    }
+
+    return Task.CompletedTask;
+}
 
 /// <summary>
 /// Background service for Neo4j operations

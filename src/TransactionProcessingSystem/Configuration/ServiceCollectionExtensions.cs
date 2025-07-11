@@ -2,35 +2,54 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
+using TransactionProcessingSystem.Services;
+using TransactionProcessingSystem.Processors;
 
 namespace TransactionProcessingSystem.Configuration;
 
 /// <summary>
-/// Extension methods for configuring services related to application settings
+/// Extension methods for configuring services following SRP and modern C# practices
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds and configures all application settings including secrets
+    /// Adds and configures all application settings and secrets with comprehensive validation.
+    /// Keeps settings and secrets separate as requested.
     /// </summary>
     public static IServiceCollection AddApplicationConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
-        // Configure regular application settings
+        // Configure application settings (non-secrets)
         services.Configure<AppSettings>(configuration);
         services.Configure<OpenAISettings>(configuration.GetSection("OpenAI"));
         services.Configure<MicrosoftGraphSettings>(configuration.GetSection("MicrosoftGraph"));
         services.Configure<TransactionApiSettings>(configuration.GetSection("TransactionApi"));
         services.Configure<ExportSettings>(configuration.GetSection("Export"));
         services.Configure<PipelineSettings>(configuration.GetSection("Pipeline"));
-        services.Configure<Neo4jSettings>(configuration.GetSection("Neo4j"));
 
-        // Configure secrets (from User Secrets in dev, Environment Variables in prod)
+        // Configure secrets separately (from User Secrets in dev, Environment Variables in prod)
         services.Configure<SecretsSettings>(configuration);
         services.Configure<OpenAISecrets>(configuration.GetSection("Secrets:OpenAI"));
         services.Configure<MicrosoftGraphSecrets>(configuration.GetSection("Secrets:MicrosoftGraph"));
         services.Configure<Neo4jSecrets>(configuration.GetSection("Secrets:Neo4j"));
 
-        // Create combined Neo4j configuration
+        // Configure Neo4j settings separately to follow SRP
+        services.Configure<Neo4jSettings>(configuration.GetSection("Neo4j"));
+
+        // Register all validators for comprehensive startup validation
+        services.AddSingleton<IValidateOptions<AppSettings>, AppSettingsValidator>();
+        services.AddSingleton<IValidateOptions<SecretsSettings>, SecretsSettingsValidator>();
+        services.AddSingleton<IValidateOptions<Neo4jSettings>, Neo4jSettingsValidator>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Single Neo4j bootstrap call that handles everything Neo4j related.
+    /// Follows SRP by keeping all Neo4j concerns together.
+    /// </summary>
+    public static IServiceCollection AddNeo4jBootstrap(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Register Neo4jConfiguration factory for direct resolution and IOptions pattern
         services.AddSingleton<Neo4jConfiguration>(serviceProvider =>
         {
             var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
@@ -43,15 +62,14 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        return services;
-    }
+        // Register for IOptions<Neo4jConfiguration> pattern using the singleton factory
+        services.AddSingleton<IOptions<Neo4jConfiguration>>(serviceProvider =>
+        {
+            var config = serviceProvider.GetRequiredService<Neo4jConfiguration>();
+            return Options.Create(config);
+        });
 
-    /// <summary>
-    /// Adds and configures Neo4j services with proper validation and dependency injection
-    /// </summary>
-    public static IServiceCollection AddNeo4jServices(this IServiceCollection services, IConfiguration configuration)
-    {
-        // Add validation for the configuration
+        // Register validator for Neo4jConfiguration
         services.AddSingleton<IValidateOptions<Neo4jConfiguration>, Neo4jConfigurationValidator>();
 
         // Register Neo4j Driver as singleton with proper configuration
@@ -59,6 +77,7 @@ public static class ServiceCollectionExtensions
         {
             var neo4jConfig = serviceProvider.GetRequiredService<Neo4jConfiguration>();
 
+            // Validation is handled by IValidateOptions, but we still check IsValid for safety
             if (!neo4jConfig.IsValid)
             {
                 throw new InvalidOperationException(
@@ -77,37 +96,31 @@ public static class ServiceCollectionExtensions
             return driver;
         });
 
+        // Register Neo4j services
+        services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
+        services.AddScoped<INeo4jReactiveDataAccess, Neo4jReactiveDataAccess>();
+
         return services;
     }
-}
 
-/// <summary>
-/// Validator for Neo4j configuration
-/// </summary>
-public class Neo4jConfigurationValidator : IValidateOptions<Neo4jConfiguration>
-{
-    public ValidateOptionsResult Validate(string? name, Neo4jConfiguration options)
+    /// <summary>
+    /// Adds all transaction processing services including processors, pipeline, and background services.
+    /// Follows SRP by grouping related application services together.
+    /// </summary>
+    public static IServiceCollection AddTransactionProcessingServices(this IServiceCollection services)
     {
-        if (string.IsNullOrWhiteSpace(options.ConnectionUri))
-        {
-            return ValidateOptionsResult.Fail("Neo4j ConnectionUri is required in secrets configuration.");
-        }
+        // Processors
+        services.AddScoped<Neo4jProcessor>();
 
-        if (string.IsNullOrWhiteSpace(options.Username))
-        {
-            return ValidateOptionsResult.Fail("Neo4j Username is required in secrets configuration.");
-        }
+        // Pipeline
+        services.AddScoped<TransactionPipeline>();
 
-        if (string.IsNullOrWhiteSpace(options.Password))
-        {
-            return ValidateOptionsResult.Fail("Neo4j Password is required in secrets configuration.");
-        }
+        // Background Services
+        services.AddHostedService<Neo4jBackgroundService>();
 
-        if (!Uri.TryCreate(options.ConnectionUri, UriKind.Absolute, out _))
-        {
-            return ValidateOptionsResult.Fail("Neo4j ConnectionUri must be a valid URI.");
-        }
-
-        return ValidateOptionsResult.Success;
+        // Other transaction processing services can be added here
+        // Example: services.AddScoped<ITransactionValidator, TransactionValidator>();
+        
+        return services;
     }
 }

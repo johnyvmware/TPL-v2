@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Models;
-using TransactionProcessingSystem.Processors;
+using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Services;
 using System.Runtime.CompilerServices;
 
@@ -23,7 +23,7 @@ public interface ITransactionFetcher
 /// </summary>
 public sealed class TransactionPipeline(
     ITransactionFetcher fetcher,
-    Neo4jProcessor neo4jProcessor,
+    Neo4jExporter neo4jExporter,
     ILogger<TransactionPipeline> logger)
 {
     public async ValueTask<ProcessingResult> ProcessAsync(
@@ -108,8 +108,8 @@ public sealed class TransactionPipeline(
             try
             {
                 // Process through Neo4j processor using modern async patterns
-                processedTransaction = await neo4jProcessor.ProcessItemAsync(transaction, cancellationToken)
-                    .ConfigureAwait(false);
+                processedTransaction = await neo4jExporter.ProcessItemAsync(transaction, cancellationToken)
+    .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -160,7 +160,7 @@ public sealed class TransactionPipeline(
         {
             logger.LogDebug("Retrieving pipeline analytics from Neo4j processor");
 
-            return await neo4jProcessor.AnalyzeTransactionPatternsAsync(cancellationToken).ConfigureAwait(false);
+            return await neo4jExporter.AnalyzeTransactionPatternsAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -175,7 +175,7 @@ public sealed class TransactionPipeline(
     {
         logger.LogDebug("Finding similar transactions for {TransactionId} through pipeline", referenceTransaction.Id);
 
-        await foreach (var similar in neo4jProcessor.FindSimilarTransactionsAsync(referenceTransaction, cancellationToken))
+        await foreach (var similar in neo4jExporter.FindSimilarTransactionsAsync(referenceTransaction, cancellationToken))
         {
             yield return similar;
         }
@@ -186,7 +186,7 @@ public sealed class TransactionPipeline(
     {
         logger.LogDebug("Retrieving graph statistics through pipeline");
 
-        await foreach (var statistic in neo4jProcessor.GetGraphStatisticsAsync(cancellationToken))
+        await foreach (var statistic in neo4jExporter.GetGraphStatisticsAsync(cancellationToken))
         {
             yield return statistic;
         }
@@ -199,7 +199,7 @@ public sealed class TransactionPipeline(
     {
         logger.LogDebug("Executing custom analytics query through pipeline");
 
-        await foreach (var result in neo4jProcessor.ExecuteCustomAnalyticsAsync(cypherQuery, parameters, cancellationToken))
+        await foreach (var result in neo4jExporter.ExecuteCustomAnalyticsAsync(cypherQuery, parameters, cancellationToken))
         {
             yield return result;
         }
@@ -218,7 +218,7 @@ public sealed class TransactionPipeline(
         await foreach (var batch in ChunkAsyncEnumerable(transactions, batchSize, cancellationToken))
         {
             // Process each batch through the Neo4j processor for high throughput
-            await foreach (var processed in neo4jProcessor.ProcessTransactionsBatchAsync(ConvertToAsyncEnumerable(batch), cancellationToken))
+            await foreach (var processed in neo4jExporter.ProcessTransactionsBatchAsync(ConvertToAsyncEnumerable(batch), cancellationToken))
             {
                 yield return processed;
             }

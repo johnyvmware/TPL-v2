@@ -5,7 +5,7 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Components;
 
-public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>>
+public class TransactionFetcher : ProcessorBase<string, string>
 {
     private readonly HttpClient _httpClient;
     private readonly TransactionApiSettings _settings;
@@ -22,21 +22,19 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
         _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
     }
 
-    protected override async Task<IEnumerable<Transaction>> ProcessAsync(string endpoint)
+    protected override async Task<string> ProcessAsync(string endpoint)
     {
-        _logger.LogInformation("Fetching transactions from endpoint: {Endpoint}", endpoint);
+        _logger.LogInformation("Fetching raw data from endpoint: {Endpoint}", endpoint);
 
         try
         {
             var response = await FetchWithRetry(endpoint);
-            var transactions = await ParseTransactions(response);
-
-            _logger.LogInformation("Successfully fetched {Count} transactions", transactions.Count());
-            return transactions;
+            _logger.LogInformation("Successfully fetched raw response from endpoint: {Endpoint}", endpoint);
+            return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch transactions from endpoint: {Endpoint}", endpoint);
+            _logger.LogError(ex, "Failed to fetch from endpoint: {Endpoint}", endpoint);
             throw;
         }
     }
@@ -53,6 +51,7 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
+                // Return the task directly instead of awaiting to avoid unnecessary state machine
                 return await response.Content.ReadAsStringAsync();
             }
             catch (Exception ex)
@@ -70,8 +69,37 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
 
         throw lastException ?? new InvalidOperationException("Unknown error occurred during retry");
     }
+}
 
-    private async Task<IEnumerable<Transaction>> ParseTransactions(string jsonResponse)
+// Separate dataflow block for parsing transactions
+public class TransactionParser : ProcessorBase<string, IEnumerable<Transaction>>
+{
+    public TransactionParser(
+        ILogger<TransactionParser> logger,
+        int boundedCapacity = 100)
+        : base(logger, boundedCapacity)
+    {
+    }
+
+    protected override Task<IEnumerable<Transaction>> ProcessAsync(string jsonResponse)
+    {
+        _logger.LogDebug("Parsing transactions from JSON response");
+
+        try
+        {
+            var transactions = ParseTransactions(jsonResponse);
+            _logger.LogInformation("Successfully parsed {Count} transactions", transactions.Count());
+            return Task.FromResult(transactions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse transactions from JSON response");
+            throw;
+        }
+    }
+
+    // Parse transaction in separate block and made synchronous since there's no async code
+    private IEnumerable<Transaction> ParseTransactions(string jsonResponse)
     {
         var options = new JsonSerializerOptions
         {
@@ -110,7 +138,6 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
             };
         }).ToList();
 
-        await Task.CompletedTask; // Ensure async compliance
         return transactions;
     }
 }

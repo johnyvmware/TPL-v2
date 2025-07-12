@@ -9,30 +9,30 @@ namespace TransactionProcessingSystem.Pipeline;
 public class TransactionPipeline : IDisposable
 {
     private readonly TransactionFetcher _fetcher;
+    private readonly TransactionParser _parser;
     private readonly TransactionProcessor _processor;
     private readonly EmailEnricher _enricher;
     private readonly Categorizer _categorizer;
-    private readonly Neo4jProcessor _neo4jProcessor;
-    private readonly CsvExporter _exporter;
+    private readonly Neo4jExporter _neo4jExporter;
     private readonly ILogger<TransactionPipeline> _logger;
     private readonly PipelineSettings _settings;
 
     public TransactionPipeline(
         TransactionFetcher fetcher,
+        TransactionParser parser,
         TransactionProcessor processor,
         EmailEnricher enricher,
         Categorizer categorizer,
-        Neo4jProcessor neo4jProcessor,
-        CsvExporter exporter,
+        Neo4jExporter neo4jExporter,
         PipelineSettings settings,
         ILogger<TransactionPipeline> logger)
     {
         _fetcher = fetcher;
+        _parser = parser;
         _processor = processor;
         _enricher = enricher;
         _categorizer = categorizer;
-        _neo4jProcessor = neo4jProcessor;
-        _exporter = exporter;
+        _neo4jExporter = neo4jExporter;
         _settings = settings;
         _logger = logger;
 
@@ -41,8 +41,8 @@ public class TransactionPipeline : IDisposable
 
     private void ConnectPipeline()
     {
-        // Connect fetcher to processor via transform to handle IEnumerable<Transaction>
-        var fetcherToProcessor = new TransformManyBlock<IEnumerable<Transaction>, Transaction>(
+        // Connect parser to processor via transform to handle IEnumerable<Transaction>
+        var parserToProcessor = new TransformManyBlock<IEnumerable<Transaction>, Transaction>(
             transactions => transactions,
             new ExecutionDataflowBlockOptions
             {
@@ -50,15 +50,15 @@ public class TransactionPipeline : IDisposable
                 MaxDegreeOfParallelism = _settings.MaxDegreeOfParallelism
             });
 
-        // Connect the pipeline stages
-        _fetcher.OutputBlock.LinkTo(fetcherToProcessor, new DataflowLinkOptions { PropagateCompletion = true });
-        fetcherToProcessor.LinkTo(_processor.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        // Connect the pipeline stages: fetcher -> parser -> transformMany -> processor -> enricher -> categorizer -> exporter
+        _fetcher.OutputBlock.LinkTo(_parser.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        _parser.OutputBlock.LinkTo(parserToProcessor, new DataflowLinkOptions { PropagateCompletion = true });
+        parserToProcessor.LinkTo(_processor.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
         _processor.OutputBlock.LinkTo(_enricher.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
         _enricher.OutputBlock.LinkTo(_categorizer.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
-        _categorizer.OutputBlock.LinkTo(_neo4jProcessor.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
-        _neo4jProcessor.OutputBlock.LinkTo(_exporter.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        _categorizer.OutputBlock.LinkTo(_neo4jExporter.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
 
-        _logger.LogInformation("Transaction pipeline connected successfully");
+        _logger.LogInformation("Transaction pipeline connected successfully with separate parser block");
     }
 
     public async Task<PipelineResult> ProcessTransactionsAsync(string endpoint, CancellationToken cancellationToken = default)
@@ -87,11 +87,11 @@ public class TransactionPipeline : IDisposable
             // Wait for pipeline completion with timeout
             var completionTask = Task.WhenAll(
                 _fetcher.Completion,
+                _parser.Completion,
                 _processor.Completion,
                 _enricher.Completion,
                 _categorizer.Completion,
-                _neo4jProcessor.Completion,
-                _exporter.Completion
+                _neo4jExporter.Completion
             );
 
             var timeoutTask = Task.Delay(TimeSpan.FromMinutes(_settings.TimeoutMinutes), cancellationToken);
@@ -102,8 +102,7 @@ public class TransactionPipeline : IDisposable
                 throw new TimeoutException($"Pipeline processing timed out after {_settings.TimeoutMinutes} minutes");
             }
 
-            // Ensure final flush of exporter
-            await _exporter.FinalFlush();
+            // CSV exporter removed - using Neo4j export instead
 
             result.EndTime = DateTime.UtcNow;
             result.Duration = result.EndTime - result.StartTime;
@@ -131,11 +130,11 @@ public class TransactionPipeline : IDisposable
     public void Dispose()
     {
         _fetcher?.Dispose();
+        _parser?.Dispose();
         _processor?.Dispose();
         _enricher?.Dispose();
         _categorizer?.Dispose();
-        _neo4jProcessor?.Dispose();
-        _exporter?.Dispose();
+        _neo4jExporter?.Dispose();
     }
 }
 

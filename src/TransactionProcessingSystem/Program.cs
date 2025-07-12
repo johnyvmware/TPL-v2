@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Services;
-using TransactionProcessingSystem.Processors;
+using TransactionProcessingSystem.Components;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -96,10 +96,10 @@ public class Neo4jBackgroundService(
         {
             using var scope = serviceProvider.CreateScope();
             var neo4jDataAccess = scope.ServiceProvider.GetRequiredService<INeo4jDataAccess>();
-            var neo4jProcessor = scope.ServiceProvider.GetRequiredService<Neo4jProcessor>();
+            var neo4jExporter = scope.ServiceProvider.GetRequiredService<Neo4jExporter>();
 
-            // Initialize the processor
-            await neo4jProcessor.InitializeAsync(stoppingToken);
+            // Initialize the exporter
+            await neo4jExporter.InitializeAsync(stoppingToken);
 
             // Verify connectivity
             var isConnected = await neo4jDataAccess.VerifyConnectivityAsync(stoppingToken);

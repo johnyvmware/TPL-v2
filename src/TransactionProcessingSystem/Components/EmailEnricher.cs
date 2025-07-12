@@ -5,6 +5,7 @@ using Microsoft.Graph;
 using Azure.Identity;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
+using System.Runtime.CompilerServices;
 
 namespace TransactionProcessingSystem.Components;
 
@@ -33,8 +34,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
 
         try
         {
-            var emails = await SearchRelevantEmails(transaction);
-            var matchedEmail = FindBestEmailMatch(transaction, emails);
+            var matchedEmail = await FindBestEmailMatchAsync(transaction);
 
             var enrichedTransaction = transaction with
             {
@@ -81,63 +81,75 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         }
     }
 
-    private async Task<IEnumerable<EmailMatch>> SearchRelevantEmails(Transaction transaction)
+    // Using true async enumerator pattern for better streaming performance
+    private async IAsyncEnumerable<EmailMatch> SearchRelevantEmailsAsync(
+        Transaction transaction,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        var startDate = transaction.Date.AddDays(-_settings.EmailSearchDays);
+        var endDate = transaction.Date.AddDays(_settings.EmailSearchDays);
+
+        var filter = $"receivedDateTime ge {startDate:yyyy-MM-ddTHH:mm:ssZ} and receivedDateTime le {endDate:yyyy-MM-ddTHH:mm:ssZ}";
+
+        Microsoft.Graph.Models.MessageCollectionResponse? messages = null;
         try
         {
-            var startDate = transaction.Date.AddDays(-_settings.EmailSearchDays);
-            var endDate = transaction.Date.AddDays(_settings.EmailSearchDays);
-
-            var filter = $"receivedDateTime ge {startDate:yyyy-MM-ddTHH:mm:ssZ} and receivedDateTime le {endDate:yyyy-MM-ddTHH:mm:ssZ}";
-
             var messagesRequest = _graphClient.Me.Messages.GetAsync(requestConfiguration =>
             {
                 requestConfiguration.QueryParameters.Filter = filter;
                 requestConfiguration.QueryParameters.Select = new[] { "subject", "bodyPreview", "receivedDateTime" };
                 requestConfiguration.QueryParameters.Top = 50;
-            });
+            }, cancellationToken);
 
-            var messages = await messagesRequest;
-
-            var emailMatches = messages?.Value?
-                .Where(m => m.Subject != null && m.BodyPreview != null)
-                .Select(m => new EmailMatch
-                {
-                    Subject = m.Subject!,
-                    Snippet = m.BodyPreview!,
-                    ReceivedDateTime = m.ReceivedDateTime?.DateTime ?? DateTime.MinValue
-                })
-                .ToList() ?? new List<EmailMatch>();
+            messages = await messagesRequest;
 
             _logger.LogDebug("Found {Count} emails in date range for transaction {Id}",
-                emailMatches.Count, transaction.Id);
-
-            return emailMatches;
+                messages?.Value?.Count ?? 0, transaction.Id);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to search emails for transaction {Id}", transaction.Id);
-            return Enumerable.Empty<EmailMatch>();
+            yield break; // Exit early on error
+        }
+
+        // Stream results as async enumerator instead of collecting first
+        if (messages?.Value != null)
+        {
+            foreach (var message in messages.Value)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
+
+                if (message.Subject != null && message.BodyPreview != null)
+                {
+                    yield return new EmailMatch
+                    {
+                        Subject = message.Subject,
+                        Snippet = message.BodyPreview,
+                        ReceivedDateTime = message.ReceivedDateTime?.DateTime ?? DateTime.MinValue
+                    };
+                }
+            }
         }
     }
 
-    private EmailMatch? FindBestEmailMatch(Transaction transaction, IEnumerable<EmailMatch> emails)
+    private async Task<EmailMatch?> FindBestEmailMatchAsync(Transaction transaction)
     {
-        if (!emails.Any())
-            return null;
+        EmailMatch? bestEmail = null;
+        var bestScore = 0.0;
 
-        var candidates = emails.ToList();
-        var bestMatch = candidates
-            .Select(email => new
+        // Use async enumerator instead of await foreach to stream process candidates
+        await foreach (var email in SearchRelevantEmailsAsync(transaction))
+        {
+            var score = CalculateMatchScore(transaction, email);
+            if (score > bestScore)
             {
-                Email = email,
-                Score = CalculateMatchScore(transaction, email)
-            })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .FirstOrDefault();
+                bestEmail = email;
+                bestScore = score;
+            }
+        }
 
-        return bestMatch?.Email;
+        return bestScore > 0 ? bestEmail : null;
     }
 
     private double CalculateMatchScore(Transaction transaction, EmailMatch email)

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Services;
+using System.Runtime.CompilerServices;
 
 namespace TransactionProcessingSystem.Components;
 
@@ -52,12 +53,126 @@ public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
         }
     }
 
+    // Additional methods expected by other parts of the codebase
+    public async ValueTask<Transaction> ProcessItemAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Processing transaction {TransactionId} for Neo4j storage", transaction.Id);
+
+            var storedTransactionId = await _neo4jDataAccess.UpsertTransactionAsync(transaction, cancellationToken);
+
+            _logger.LogTrace("Successfully stored transaction {TransactionId} in Neo4j as {StoredId}",
+                transaction.Id, storedTransactionId);
+
+            return transaction with { Status = ProcessingStatus.Processed };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process transaction {TransactionId} in Neo4j", transaction.Id);
+            return transaction with { Status = ProcessingStatus.Failed };
+        }
+    }
+
+    public async ValueTask<TransactionAnalytics> AnalyzeTransactionPatternsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Retrieving transaction analytics from Neo4j");
+            return await _neo4jDataAccess.GetTransactionAnalyticsAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve transaction analytics");
+            throw;
+        }
+    }
+
+    public async IAsyncEnumerable<Transaction> FindSimilarTransactionsAsync(
+        Transaction referenceTransaction,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Finding similar transactions for {TransactionId}", referenceTransaction.Id);
+
+        await foreach (var similar in _neo4jDataAccess.FindSimilarTransactionsAsync(referenceTransaction, cancellationToken))
+        {
+            yield return similar;
+        }
+    }
+
+    public async IAsyncEnumerable<GraphStatistic> GetGraphStatisticsAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Retrieving graph statistics from Neo4j");
+
+        await foreach (var statistic in _neo4jDataAccess.GetGraphStatisticsAsync(cancellationToken))
+        {
+            yield return statistic;
+        }
+    }
+
+    public async IAsyncEnumerable<IDictionary<string, object>> ExecuteCustomAnalyticsAsync(
+        string cypherQuery,
+        object? parameters = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Executing custom analytics query");
+
+        await foreach (var result in _neo4jDataAccess.ExecuteQueryAsync(cypherQuery, parameters, cancellationToken))
+        {
+            yield return result;
+        }
+    }
+
+    public async IAsyncEnumerable<Transaction> ProcessTransactionsBatchAsync(
+        IAsyncEnumerable<Transaction> transactions,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Starting batch processing of transactions to Neo4j");
+
+        await foreach (var result in _neo4jDataAccess.UpsertTransactionsAsync(transactions, cancellationToken))
+        {
+            var status = result.IsSuccess ? ProcessingStatus.Processed : ProcessingStatus.Failed;
+
+            yield return new Transaction
+            {
+                Id = result.TransactionId,
+                Status = status,
+                Date = DateTime.UtcNow,
+                Amount = 0,
+                Description = $"Batch processed at {DateTime.UtcNow}"
+            };
+        }
+    }
+
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Initializing Neo4j exporter");
+
+            var isConnected = await _neo4jDataAccess.VerifyConnectivityAsync(cancellationToken);
+            if (!isConnected)
+            {
+                throw new InvalidOperationException("Failed to connect to Neo4j database");
+            }
+
+            await _neo4jDataAccess.InitializeDatabaseAsync(cancellationToken);
+            _logger.LogInformation("Neo4j exporter initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize Neo4j exporter");
+            throw;
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
             // Neo4jDataAccess implements IAsyncDisposable and will be disposed by DI container
-            _logger.LogDebug("Neo4j processor disposed");
+            _logger.LogDebug("Neo4j exporter disposed");
         }
         base.Dispose(disposing);
     }

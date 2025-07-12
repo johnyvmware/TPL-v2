@@ -30,11 +30,25 @@ public class AsyncPatternsTests
 
         var fetcher = new TransactionFetcher(httpClient, settings, loggerMock.Object);
         fetcher.Should().NotBeNull();
-        fetcher.Should().BeAssignableTo<ProcessorBase<string, IEnumerable<Transaction>>>();
+        fetcher.Should().BeAssignableTo<ProcessorBase<string, string>>();
 
         // Cleanup
         fetcher.Dispose();
         httpClient.Dispose();
+    }
+
+    [Test]
+    public void TransactionParser_ShouldImplementCorrectPatterns()
+    {
+        // Test that TransactionParser exists and can be instantiated  
+        var loggerMock = new Mock<ILogger<TransactionParser>>();
+
+        var parser = new TransactionParser(loggerMock.Object);
+        parser.Should().NotBeNull();
+        parser.Should().BeAssignableTo<ProcessorBase<string, IEnumerable<Transaction>>>();
+
+        // Cleanup
+        parser.Dispose();
     }
 
     [Test]

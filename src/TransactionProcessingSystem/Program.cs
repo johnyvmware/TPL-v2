@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Services;
-using TransactionProcessingSystem.Processors;
+using TransactionProcessingSystem.Components;
 
 var builder = Host.CreateApplicationBuilder(args);
 

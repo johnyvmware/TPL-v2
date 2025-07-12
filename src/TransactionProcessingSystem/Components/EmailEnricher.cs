@@ -81,7 +81,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         }
     }
 
-    // Using async enumerator pattern for better async programming
+    // Using true async enumerator pattern for better streaming performance
     private async IAsyncEnumerable<EmailMatch> SearchRelevantEmailsAsync(
         Transaction transaction,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -91,8 +91,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
 
         var filter = $"receivedDateTime ge {startDate:yyyy-MM-ddTHH:mm:ssZ} and receivedDateTime le {endDate:yyyy-MM-ddTHH:mm:ssZ}";
 
-        var emailMatches = new List<EmailMatch>();
-
+        Microsoft.Graph.Models.MessageCollectionResponse? messages = null;
         try
         {
             var messagesRequest = _graphClient.Me.Messages.GetAsync(requestConfiguration =>
@@ -102,60 +101,55 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
                 requestConfiguration.QueryParameters.Top = 50;
             }, cancellationToken);
 
-            var messages = await messagesRequest;
-            var messagesList = messages?.Value?.ToList() ?? new List<Microsoft.Graph.Models.Message>();
+            messages = await messagesRequest;
 
             _logger.LogDebug("Found {Count} emails in date range for transaction {Id}",
-                messagesList.Count, transaction.Id);
-
-            foreach (var message in messagesList)
-            {
-                if (message.Subject != null && message.BodyPreview != null)
-                {
-                    emailMatches.Add(new EmailMatch
-                    {
-                        Subject = message.Subject,
-                        Snippet = message.BodyPreview,
-                        ReceivedDateTime = message.ReceivedDateTime?.DateTime ?? DateTime.MinValue
-                    });
-                }
-            }
+                messages?.Value?.Count ?? 0, transaction.Id);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to search emails for transaction {Id}", transaction.Id);
+            yield break; // Exit early on error
         }
 
-        // Yield results outside the try-catch block
-        foreach (var emailMatch in emailMatches)
+        // Stream results as async enumerator instead of collecting first
+        if (messages?.Value != null)
         {
-            yield return emailMatch;
+            foreach (var message in messages.Value)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
+
+                if (message.Subject != null && message.BodyPreview != null)
+                {
+                    yield return new EmailMatch
+                    {
+                        Subject = message.Subject,
+                        Snippet = message.BodyPreview,
+                        ReceivedDateTime = message.ReceivedDateTime?.DateTime ?? DateTime.MinValue
+                    };
+                }
+            }
         }
     }
 
     private async Task<EmailMatch?> FindBestEmailMatchAsync(Transaction transaction)
     {
-        var candidates = new List<EmailMatch>();
+        EmailMatch? bestEmail = null;
+        var bestScore = 0.0;
 
+        // Use async enumerator instead of await foreach to stream process candidates
         await foreach (var email in SearchRelevantEmailsAsync(transaction))
         {
-            candidates.Add(email);
+            var score = CalculateMatchScore(transaction, email);
+            if (score > bestScore)
+            {
+                bestEmail = email;
+                bestScore = score;
+            }
         }
 
-        if (!candidates.Any())
-            return null;
-
-        var bestMatch = candidates
-            .Select(email => new
-            {
-                Email = email,
-                Score = CalculateMatchScore(transaction, email)
-            })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .FirstOrDefault();
-
-        return bestMatch?.Email;
+        return bestScore > 0 ? bestEmail : null;
     }
 
     private double CalculateMatchScore(Transaction transaction, EmailMatch email)

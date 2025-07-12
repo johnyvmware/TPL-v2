@@ -17,7 +17,7 @@ public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
     {
     }
 
-    protected override async Task<Transaction> ProcessAsync(Transaction transaction)
+    protected override Task<Transaction> ProcessAsync(Transaction transaction)
     {
         _logger.LogDebug("Processing transaction {Id}: {Description}",
             transaction.Id, transaction.Description);
@@ -39,8 +39,8 @@ public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
             _logger.LogDebug("Processed transaction {Id}: '{Original}' -> '{Clean}'",
                 transaction.Id, transaction.Description, cleanDescription);
 
-            await Task.CompletedTask; // Ensure async compliance
-            return processedTransaction;
+            // Return completed task without creating unnecessary state machine
+            return Task.FromResult(processedTransaction);
         }
         catch (Exception ex)
         {

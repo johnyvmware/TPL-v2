@@ -7,14 +7,14 @@ using TransactionProcessingSystem.Services;
 namespace TransactionProcessingSystem.Processors;
 
 /// <summary>
-/// Modern Neo4j transaction processor using latest C# language features
+/// Modern Neo4j transaction exporter using latest C# language features
 /// Primary constructor, IAsyncEnumerable streaming, and ValueTask performance
 /// </summary>
-public sealed class Neo4jProcessor(
+public sealed class Neo4jExporter(
     INeo4jDataAccess neo4jDataAccess,
-    ILogger<Neo4jProcessor> logger)
+    ILogger<Neo4jExporter> logger)
 {
-    public ILogger<Neo4jProcessor> Logger => logger;
+    public ILogger<Neo4jExporter> Logger => logger;
 
     public async ValueTask<Transaction> ProcessItemAsync(Transaction transaction, CancellationToken cancellationToken)
     {

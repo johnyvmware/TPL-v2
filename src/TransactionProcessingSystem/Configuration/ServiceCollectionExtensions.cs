@@ -78,7 +78,7 @@ public static class ServiceCollectionExtensions
 
         // Register Neo4j data access services
         services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
-        services.AddScoped<INeo4jReactiveDataAccess, Neo4jReactiveDataAccess>();
+
 
         // Register Neo4j background service
         services.AddHostedService<Neo4jBackgroundService>();
@@ -92,7 +92,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddProcessors(this IServiceCollection services)
     {
         // Register all processors
-        services.AddScoped<Neo4jProcessor>();
+        services.AddScoped<Neo4jExporter>();
 
         // Other processors can be added here
         // Example: services.AddScoped<ValidationProcessor>();

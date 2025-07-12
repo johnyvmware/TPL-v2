@@ -5,15 +5,15 @@ using TransactionProcessingSystem.Services;
 namespace TransactionProcessingSystem.Components;
 
 /// <summary>
-/// Neo4j processor that stores transactions in a graph database and creates relationships
+/// Neo4j exporter that stores transactions in a graph database and creates relationships
 /// </summary>
-public class Neo4jProcessor : ProcessorBase<Transaction, Transaction>
+public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
 {
     private readonly INeo4jDataAccess _neo4jDataAccess;
 
-    public Neo4jProcessor(
+    public Neo4jExporter(
         INeo4jDataAccess neo4jDataAccess,
-        ILogger<Neo4jProcessor> logger,
+        ILogger<Neo4jExporter> logger,
         int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {

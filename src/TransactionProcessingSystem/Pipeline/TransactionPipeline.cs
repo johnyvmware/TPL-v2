@@ -12,8 +12,7 @@ public class TransactionPipeline : IDisposable
     private readonly TransactionProcessor _processor;
     private readonly EmailEnricher _enricher;
     private readonly Categorizer _categorizer;
-    private readonly Neo4jProcessor _neo4jProcessor;
-    private readonly CsvExporter _exporter;
+    private readonly Neo4jExporter _neo4jExporter;
     private readonly ILogger<TransactionPipeline> _logger;
     private readonly PipelineSettings _settings;
 
@@ -22,8 +21,7 @@ public class TransactionPipeline : IDisposable
         TransactionProcessor processor,
         EmailEnricher enricher,
         Categorizer categorizer,
-        Neo4jProcessor neo4jProcessor,
-        CsvExporter exporter,
+        Neo4jExporter neo4jExporter,
         PipelineSettings settings,
         ILogger<TransactionPipeline> logger)
     {
@@ -31,8 +29,7 @@ public class TransactionPipeline : IDisposable
         _processor = processor;
         _enricher = enricher;
         _categorizer = categorizer;
-        _neo4jProcessor = neo4jProcessor;
-        _exporter = exporter;
+        _neo4jExporter = neo4jExporter;
         _settings = settings;
         _logger = logger;
 
@@ -55,8 +52,7 @@ public class TransactionPipeline : IDisposable
         fetcherToProcessor.LinkTo(_processor.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
         _processor.OutputBlock.LinkTo(_enricher.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
         _enricher.OutputBlock.LinkTo(_categorizer.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
-        _categorizer.OutputBlock.LinkTo(_neo4jProcessor.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
-        _neo4jProcessor.OutputBlock.LinkTo(_exporter.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
+        _categorizer.OutputBlock.LinkTo(_neo4jExporter.InputBlock, new DataflowLinkOptions { PropagateCompletion = true });
 
         _logger.LogInformation("Transaction pipeline connected successfully");
     }
@@ -90,8 +86,7 @@ public class TransactionPipeline : IDisposable
                 _processor.Completion,
                 _enricher.Completion,
                 _categorizer.Completion,
-                _neo4jProcessor.Completion,
-                _exporter.Completion
+                            _neo4jExporter.Completion
             );
 
             var timeoutTask = Task.Delay(TimeSpan.FromMinutes(_settings.TimeoutMinutes), cancellationToken);
@@ -103,7 +98,7 @@ public class TransactionPipeline : IDisposable
             }
 
             // Ensure final flush of exporter
-            await _exporter.FinalFlush();
+            // CSV exporter removed - using Neo4j export instead
 
             result.EndTime = DateTime.UtcNow;
             result.Duration = result.EndTime - result.StartTime;
@@ -134,8 +129,7 @@ public class TransactionPipeline : IDisposable
         _processor?.Dispose();
         _enricher?.Dispose();
         _categorizer?.Dispose();
-        _neo4jProcessor?.Dispose();
-        _exporter?.Dispose();
+        _neo4jExporter?.Dispose();
     }
 }
 

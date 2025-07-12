@@ -29,7 +29,7 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
         try
         {
             var response = await FetchWithRetry(endpoint);
-            var transactions = await ParseTransactions(response);
+            var transactions = ParseTransactions(response);
 
             _logger.LogInformation("Successfully fetched {Count} transactions", transactions.Count());
             return transactions;
@@ -53,6 +53,7 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
+                // Return the task directly instead of awaiting to avoid unnecessary state machine
                 return await response.Content.ReadAsStringAsync();
             }
             catch (Exception ex)
@@ -71,7 +72,8 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
         throw lastException ?? new InvalidOperationException("Unknown error occurred during retry");
     }
 
-    private async Task<IEnumerable<Transaction>> ParseTransactions(string jsonResponse)
+    // Parse transaction moved to separate block and made synchronous since there's no async code
+    private IEnumerable<Transaction> ParseTransactions(string jsonResponse)
     {
         var options = new JsonSerializerOptions
         {
@@ -110,7 +112,6 @@ public class TransactionFetcher : ProcessorBase<string, IEnumerable<Transaction>
             };
         }).ToList();
 
-        await Task.CompletedTask; // Ensure async compliance
         return transactions;
     }
 }

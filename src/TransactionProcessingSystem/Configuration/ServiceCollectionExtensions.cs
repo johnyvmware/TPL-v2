@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Services;
-using TransactionProcessingSystem.Processors;
+using TransactionProcessingSystem.Components;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -78,7 +78,7 @@ public static class ServiceCollectionExtensions
 
         // Register Neo4j data access services
         services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
-        services.AddScoped<INeo4jReactiveDataAccess, Neo4jReactiveDataAccess>();
+
 
         // Register Neo4j background service
         services.AddHostedService<Neo4jBackgroundService>();
@@ -87,12 +87,11 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds all processors including Neo4j processor.
+    /// Adds all processors including Neo4j exporter.
     /// </summary>
     public static IServiceCollection AddProcessors(this IServiceCollection services)
     {
-        // Register all processors
-        services.AddScoped<Neo4jProcessor>();
+        // Register all processors - Neo4jExporter is now registered in AddTransactionProcessingServices
 
         // Other processors can be added here
         // Example: services.AddScoped<ValidationProcessor>();
@@ -101,15 +100,25 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds transaction processing services including pipeline and other application services.
+    /// Adds transaction processing services including pipeline and all components.
     /// </summary>
     public static IServiceCollection AddTransactionProcessingServices(this IServiceCollection services)
     {
+        // Add HttpClient for TransactionFetcher
+        services.AddHttpClient<TransactionFetcher>();
+
+        // Register all pipeline components
+        services.AddScoped<TransactionFetcher>();
+        services.AddScoped<TransactionParser>();
+        services.AddScoped<TransactionProcessor>();
+        services.AddScoped<EmailEnricher>();
+        services.AddScoped<Categorizer>();
+
         // Transaction processing pipeline
         services.AddScoped<TransactionPipeline>();
 
-        // Other transaction processing services can be added here
-        // Example: services.AddScoped<ITransactionValidator, TransactionValidator>();
+        // Other transaction processing services
+        services.AddScoped<TransactionProcessingSystem.Services.TransactionPipeline>();
 
         return services;
     }

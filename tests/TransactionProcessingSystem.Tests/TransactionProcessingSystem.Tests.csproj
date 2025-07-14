@@ -13,8 +13,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="NUnit" Version="4.0.1" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0">
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -30,8 +30,8 @@
     <PackageReference Include="System.Linq.Async" Version="6.0.3" />
     
     <!-- Neo4j Testing -->
-    <PackageReference Include="Neo4j.Driver" Version="5.28.1" />
-    <PackageReference Include="Neo4j.Driver.Reactive" Version="5.28.1" />
+    <PackageReference Include="Neo4j.Driver" Version="5.28.2" />
+    <PackageReference Include="Neo4j.Driver.Reactive" Version="5.28.2" />
     
     <!-- Microsoft Extensions -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />

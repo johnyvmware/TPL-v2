@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
@@ -10,17 +11,35 @@ public class TransactionFetcher : ProcessorBase<string, string>
     private readonly HttpClient _httpClient;
     private readonly TransactionApiSettings _settings;
 
+    // Option 1: Traditional IOptions pattern (still works and is recommended for most cases)
     public TransactionFetcher(
         HttpClient httpClient,
-        TransactionApiSettings settings,
+        IOptions<TransactionApiSettings> settings,
         ILogger<TransactionFetcher> logger,
         int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {
         _httpClient = httpClient;
-        _settings = settings;
+        
+        // With .NET 9's .ValidateOnStart(), settings.Value is guaranteed to be valid
+        // No need for defensive programming since validation happens before instantiation
+        _settings = settings.Value;
         _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
     }
+
+    // Option 2: Direct injection pattern (new in .NET 9) - uncomment to use this approach
+    // This approach injects the configuration object directly instead of IOptions<T>
+    // public TransactionFetcher(
+    //     HttpClient httpClient,
+    //     TransactionApiSettings settings,  // Direct injection of the settings object
+    //     ILogger<TransactionFetcher> logger,
+    //     int boundedCapacity = 100)
+    //     : base(logger, boundedCapacity)
+    // {
+    //     _httpClient = httpClient;
+    //     _settings = settings;  // No .Value needed
+    //     _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
+    // }
 
     protected override async Task<string> ProcessAsync(string endpoint)
     {

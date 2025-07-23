@@ -23,6 +23,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {
+        // With .NET 9's .ValidateOnStart(), settings.Value and secrets.Value are guaranteed to be valid
         _settings = settings.Value;
         _secrets = secrets.Value;
         _graphClient = CreateGraphClient();

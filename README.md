@@ -4,29 +4,51 @@
 
 ## 🚀 Automation & CI/CD
 
-Our CI/CD and automation suite ensures every commit is built, tested, and delivered with maximum reliability and security.
+Ensure every commit is built, tested, and delivered with maximum reliability and security.
 
 | Component                | Status                                                                                                   | Description                                              |
 |--------------------------|----------------------------------------------------------------------------------------------------------|----------------------------------------------------------|
-| **Main CI/CD Pipeline**  | ![CI/CD](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml/badge.svg)                      | Orchestrates build, test, security, and release on `main`|
-| &nbsp;&nbsp;• Build & Test      | ![Build](https://img.shields.io/badge/build-automated-blue.svg)                                         | Automated .NET build, NUnit tests, and coverage analysis |
-| &nbsp;&nbsp;• Security Scan     | ![Security](https://img.shields.io/badge/security-scan-green.svg)                                      | Scans for vulnerabilities and secrets                    |
-| &nbsp;&nbsp;• Release Artifacts | ![Artifacts](https://img.shields.io/badge/artifacts-generated-purple.svg)                               | Publishes self-contained application packages            |
-| **PR Validation**        | ![PR Validation](https://github.com/johnyvmware/TPL-v2/actions/workflows/pr-validation.yml/badge.svg)     | Enforces quality gates for all pull requests             |
+| **CI/CD**  | ![CI/CD](https://github.com/johnyvmware/TPL-v2/actions/workflows/ci.yml/badge.svg)                      | Orchestrates build, test, security, and release on `main`|
+| &nbsp;&nbsp;• Build & Test      | | Automated .NET build, NUnit tests, and coverage analysis |
+| &nbsp;&nbsp;• Security Scan     | | Scans for vulnerabilities and secrets                    |
+| &nbsp;&nbsp;• Release Artifacts | | Publishes self-contained application packages            |           |
 | **Code Coverage**        | ![Coverage](https://codecov.io/gh/johnyvmware/TPL-v2/branch/main/graph/badge.svg)                        | Tracks and reports test coverage metrics                 |
 | **Code Formatting**      | ![Format](https://img.shields.io/badge/dotnet_format-enforced-blue.svg)                                  | Enforces consistent code style automatically             |
 | **Dependency Updates**   | ![Dependabot](https://img.shields.io/badge/dependabot-weekly-blue.svg)                                   | Keeps NuGet and GitHub Actions dependencies up to date   |
 
-**Highlights:**
-- **Full automation**: Every push and PR triggers the pipeline for instant feedback.
-- **Security-first**: Integrated scanning for vulnerabilities and secrets.
-- **Quality assurance**: Automated tests, code coverage, and formatting checks on every change.
-- **Continuous delivery**: Artifacts are built and published for every release.
-- **Effortless maintenance**: Dependencies are updated automatically via Dependabot.
+## Required Secrets
+
+- **Windows**: `%APPDATA%\Microsoft\UserSecrets\94bedc6c-a871-4a2e-b4c5-98271ef751d2\secrets.json`
+- **macOS/Linux**: `~/.microsoft/usersecrets/94bedc6c-a871-4a2e-b4c5-98271ef751d2/secrets.json`
+
+### 1. OpenAI Configuration
+Used by the `Categorizer` component for AI-powered transaction categorization
+
+| Secret Key | Description | Example |
+|------------|-------------|---------|
+| `Secrets:OpenAI:ApiKey` | Your OpenAI API key for GPT-4 access | `sk-...` |
+
+### 2. Microsoft Graph Configuration
+Used by the `EmailEnricher` component to fetch email data from Microsoft Graph API
+
+| Secret Key | Description | Example |
+|------------|-------------|---------|
+| `Secrets:MicrosoftGraph:ClientId` | Azure App Registration Client ID | `12345678-1234-1234-1234-123456789012` |
+| `Secrets:MicrosoftGraph:ClientSecret` | Azure App Registration Client Secret | `your-client-secret-here` |
+| `Secrets:MicrosoftGraph:TenantId` | Azure Tenant ID | `87654321-4321-4321-4321-210987654321` |
+
+### 3. Neo4j Database Configuration
+Used by the `Neo4jExporter` component to store transaction data in the Neo4j graph database
+
+| Secret Key | Description | Example |
+|------------|-------------|---------|
+| `Secrets:Neo4j:ConnectionUri` | Neo4j database connection URI | `bolt://localhost:7687` |
+| `Secrets:Neo4j:Username` | Neo4j database username | `neo4j` |
+| `Secrets:Neo4j:Password` | Neo4j database password | `your-neo4j-password` |
 
 ## 🏗️ Architecture
 
-Modern 5-stage processing pipeline using TPL Dataflow:
+5-stage processing pipeline using TPL Dataflow:
 
 ```
 TransactionFetcher → TransactionProcessor → EmailEnricher → Categorizer → CsvExporter

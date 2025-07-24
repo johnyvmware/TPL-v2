@@ -1,12 +1,11 @@
 using Microsoft.Extensions.Options;
-using System.ComponentModel.DataAnnotations;
 
 namespace TransactionProcessingSystem.Configuration;
 
 /// <summary>
-/// Validator for Pipeline settings with performance constraints
+/// Validator for Max Degree Of Parallelism settings.
 /// </summary>
-public sealed class PipelineSettingsValidator : IValidateOptions<PipelineSettings>
+public sealed class MaxDegreeOfParallelismValidator : IValidateOptions<PipelineSettings>
 {
     public ValidateOptionsResult Validate(string? name, PipelineSettings options)
     {

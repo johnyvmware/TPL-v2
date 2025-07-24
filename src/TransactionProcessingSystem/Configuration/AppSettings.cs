@@ -75,7 +75,7 @@ public record TransactionApiSettings
 public record ExportSettings
 {
     [Required]
-    [RegularExpression(@"^(?:[a-zA-Z]\:)?[\\/](?:[^<>:""/\\|?*\r\n]+[\\/])*[^<>:""/\\|?*\r\n]*$", ErrorMessage = "OutputDirectory must be a valid path.")]
+    [RegularExpression(@"^(?:\.{1,2}[\\/])?(?:[a-zA-Z]\:)?(?:[\\/])?(?:[^<>:""/\\|?*\r\n]+[\\/]?)*[^<>:""/\\|?*\r\n]*$", ErrorMessage = "OutputDirectory must be a valid path (absolute or relative).")]
     public required string OutputDirectory { get; init; }
 
     [Required]
@@ -92,9 +92,13 @@ public record ExportSettings
 /// </summary>
 public record PipelineSettings
 {
+    /// <summary>
+    /// The maximum number of items allowed in the pipeline's input buffer at any time.
+    /// Used to limit memory usage and control backpressure in TPL Dataflow pipelines.
+    /// </summary>
     [Required]
-    [Range(1, 10000)]
-    public required int BoundedCapacity { get; init; }
+    [Range(1, 100)]
+    public required int InputBufferCapacity { get; init; }
 
     [Required]
     [Range(1, int.MaxValue)]
@@ -121,20 +125,20 @@ public record Neo4jSettings
     /// Maximum number of connections in the pool.
     /// </summary>
     [Required]
-    [Range(1, 1000)]
+    [Range(1, 10)]
     public int MaxConnectionPoolSize { get; init; }
 
     /// <summary>
     /// Connection timeout in seconds.
     /// </summary>
     [Required]
-    [Range(1, 300)]
+    [Range(1, 60)]
     public int ConnectionTimeoutSeconds { get; init; }
 
     /// <summary>
     /// Maximum retry time for transactions in seconds.
     /// </summary>
     [Required]
-    [Range(1, 300)]
+    [Range(1, 15)]
     public int MaxTransactionRetryTimeSeconds { get; init; }
 }

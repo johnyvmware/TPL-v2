@@ -35,8 +35,6 @@ public class TransactionPipeline : IDisposable
         _categorizer = categorizer;
         _neo4jExporter = neo4jExporter;
         _logger = logger;
-
-        // With .NET 9's .ValidateOnStart(), settings.Value is guaranteed to be valid
         _settings = settings.Value;
 
         ConnectPipeline();
@@ -49,7 +47,7 @@ public class TransactionPipeline : IDisposable
             transactions => transactions,
             new ExecutionDataflowBlockOptions
             {
-                BoundedCapacity = _settings.BoundedCapacity,
+                BoundedCapacity = _settings.InputBufferCapacity,
                 MaxDegreeOfParallelism = _settings.MaxDegreeOfParallelism
             });
 

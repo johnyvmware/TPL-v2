@@ -26,7 +26,6 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Adds Neo4j services including driver, data access, and background service.
-    /// Follows SRP by keeping all Neo4j concerns together.
     /// </summary>
     public static IServiceCollection AddNeo4jServices(this IServiceCollection services, IConfiguration configuration)
     {
@@ -50,22 +49,6 @@ public static class ServiceCollectionExtensions
 
         // Register Neo4j data access services
         services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
-
-        // Note: Neo4jBackgroundService is commented out for demo purposes
-        // services.AddHostedService<Neo4jBackgroundService>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds all processors including Neo4j exporter.
-    /// </summary>
-    public static IServiceCollection AddProcessors(this IServiceCollection services)
-    {
-        // Register all processors - Neo4jExporter is now registered in AddTransactionProcessingServices
-
-        // Other processors can be added here
-        // Example: services.AddScoped<ValidationProcessor>();
 
         return services;
     }
@@ -95,9 +78,8 @@ public static class ServiceCollectionExtensions
     private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)
     {
         services
-            .AddOptionsWithValidateOnStart<SecretsSettings>()
-            .Bind(configuration)
-            .ValidateDataAnnotations();
+            .AddOptions<SecretsSettings>()
+            .Bind(configuration);
 
         services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
@@ -118,9 +100,8 @@ public static class ServiceCollectionExtensions
     private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
     {
         services
-            .AddOptionsWithValidateOnStart<AppSettings>()
-            .Bind(configuration)
-            .ValidateDataAnnotations();
+            .AddOptions<AppSettings>()
+            .Bind(configuration);
 
         services
             .AddOptionsWithValidateOnStart<OpenAISettings>()
@@ -143,6 +124,7 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations();
 
         services
+            .AddSingleton<IValidateOptions<PipelineSettings>, MaxDegreeOfParallelismValidator>()
             .AddOptionsWithValidateOnStart<PipelineSettings>()
             .Bind(configuration.GetSection("Pipeline"))
             .ValidateDataAnnotations();
@@ -151,7 +133,5 @@ public static class ServiceCollectionExtensions
             .AddOptionsWithValidateOnStart<Neo4jSettings>()
             .Bind(configuration.GetSection("Neo4j"))
             .ValidateDataAnnotations();
-
-        services.AddSingleton<IValidateOptions<PipelineSettings>, PipelineSettingsValidator>();
     }
 }

@@ -114,9 +114,9 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<TransactionApiSettings>()
-            .Bind(configuration.GetSection("TransactionApi"))
-            .ValidateDataAnnotations();
+           .AddOptionsWithValidateOnStart<TransactionApiSettings>()
+           .Bind(configuration.GetSection("TransactionApi"))
+           .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<ExportSettings>()

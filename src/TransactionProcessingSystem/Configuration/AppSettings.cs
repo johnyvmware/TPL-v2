@@ -10,7 +10,6 @@ public record AppSettings
 {
     public required OpenAISettings OpenAI { get; init; }
     public required MicrosoftGraphSettings MicrosoftGraph { get; init; }
-    public required TransactionApiSettings TransactionApi { get; init; }
     public required ExportSettings Export { get; init; }
     public required PipelineSettings Pipeline { get; init; }
     public required Neo4jSettings Neo4j { get; init; }
@@ -44,38 +43,12 @@ public record MicrosoftGraphSettings
 }
 
 /// <summary>
-/// Transaction API configuration - currently mock service with placeholders.
-/// Need to be improved with real API integration.
-/// </summary>
-public record TransactionApiSettings
-{
-    [Required]
-    [Url]
-    public required string BaseUrl { get; init; }
-
-    [Required]
-    [Range(1, 300)]
-    public required int TimeoutSeconds { get; init; }
-
-    [Required]
-    [Range(0, 10)]
-    public int MaxRetries { get; init; }
-
-    [Required]
-    [Range(1, 1000)]
-    public int BatchSize { get; init; }
-
-    [Required]
-    public bool EnableMockData { get; init; }
-}
-
-/// <summary>
 /// Export configuration settings.
 /// </summary>
 public record ExportSettings
 {
     [Required]
-    [RegularExpression(@"^(?:\.{1,2}[\\/])?(?:[a-zA-Z]\:)?(?:[\\/])?(?:[^<>:""/\\|?*\r\n]+[\\/]?)*[^<>:""/\\|?*\r\n]*$", ErrorMessage = "OutputDirectory must be a valid path (absolute or relative).")]
+    [RegularExpression(@"^[^<>:""/\\|?*\r\n]+([\\/][^<>:""/\\|?*\r\n]+)*$", ErrorMessage = "OutputDirectory must be a valid path (absolute or relative).")]
     public required string OutputDirectory { get; init; }
 
     [Required]

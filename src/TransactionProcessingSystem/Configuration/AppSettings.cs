@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TransactionProcessingSystem.Configuration;
 
 /// <summary>
@@ -8,58 +10,108 @@ public record AppSettings
 {
     public required OpenAISettings OpenAI { get; init; }
     public required MicrosoftGraphSettings MicrosoftGraph { get; init; }
-    public required TransactionApiSettings TransactionApi { get; init; }
     public required ExportSettings Export { get; init; }
     public required PipelineSettings Pipeline { get; init; }
     public required Neo4jSettings Neo4j { get; init; }
 }
 
 /// <summary>
-/// OpenAI configuration - API key stored as secret
+/// OpenAI configuration.
 /// </summary>
 public record OpenAISettings
 {
-    public string Model { get; init; } = "gpt-4o-mini";
-    public int MaxTokens { get; init; } = 200;
-    public double Temperature { get; init; } = 0.1;
+    [Required]
+    public required string Model { get; init; }
+
+    [Required]
+    [Range(1, 4000)]
+    public required int MaxTokens { get; init; }
+
+    [Required]
+    [Range(0, 2)]
+    public required double Temperature { get; init; }
 }
 
 /// <summary>
-/// Microsoft Graph configuration - secrets stored separately
+/// Microsoft Graph configuration.
 /// </summary>
 public record MicrosoftGraphSettings
 {
-    public int EmailSearchDays { get; init; } = 2;
+    [Required]
+    [Range(1, 365)]
+    public required int EmailSearchDays { get; init; }
 }
 
 /// <summary>
-/// Transaction API configuration - currently mock service with placeholders
-/// </summary>
-public record TransactionApiSettings
-{
-    public required string BaseUrl { get; init; }
-    public int TimeoutSeconds { get; init; } = 30;
-    public int MaxRetries { get; init; } = 3;
-    public int BatchSize { get; init; } = 50;
-    public bool EnableMockData { get; init; } = true;
-}
-
-/// <summary>
-/// Export configuration settings
+/// Export configuration settings.
 /// </summary>
 public record ExportSettings
 {
+    [Required]
+    [RegularExpression(@"^[^<>:""/\\|?*\r\n]+([\\/][^<>:""/\\|?*\r\n]+)*$", ErrorMessage = "OutputDirectory must be a valid path (absolute or relative).")]
     public required string OutputDirectory { get; init; }
-    public string FileNameFormat { get; init; } = "transactions_{0:yyyyMMdd_HHmmss}.csv";
-    public int BufferSize { get; init; } = 100;
+
+    [Required]
+    [RegularExpression(@".*\{0\}.*", ErrorMessage = "FileNameFormat must contain the {0} placeholder for timestamp.")]
+    public required string FileNameFormat { get; init; }
+
+    [Required]
+    [Range(1, 1024 * 1024)]
+    public required int BufferSize { get; init; }
 }
 
 /// <summary>
-/// Pipeline performance settings
+/// Pipeline performance settings.
 /// </summary>
 public record PipelineSettings
 {
-    public int BoundedCapacity { get; init; } = 100;
-    public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
-    public int TimeoutMinutes { get; init; } = 10;
+    /// <summary>
+    /// The maximum number of items allowed in the pipeline's input buffer at any time.
+    /// Used to limit memory usage and control backpressure in TPL Dataflow pipelines.
+    /// </summary>
+    [Required]
+    [Range(1, 100)]
+    public required int InputBufferCapacity { get; init; }
+
+    [Required]
+    [Range(1, int.MaxValue)]
+    public required int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
+
+    [Required]
+    [Range(0, 2, MinimumIsExclusive = true)]
+    public required int TimeoutMinutes { get; init; }
+}
+
+/// <summary>
+/// Configuration settings for Neo4j database connection and behavior.
+/// </summary>
+public record Neo4jSettings
+{
+    /// <summary>
+    /// Target database name.
+    /// </summary>
+    [Required]
+    [StringLength(100, MinimumLength = 1)]
+    public string Database { get; init; } = "neo4j";
+
+    /// <summary>
+    /// Maximum number of connections in the pool.
+    /// </summary>
+    [Required]
+    [Range(1, 10)]
+    public int MaxConnectionPoolSize { get; init; }
+
+    /// <summary>
+    /// Connection timeout in seconds.
+    /// </summary>
+    [Required]
+    [Range(1, 60)]
+    public int ConnectionTimeoutSeconds { get; init; }
+
+    /// <summary>
+    /// Maximum retry time for transactions in seconds.
+    /// </summary>
+    [Required]
+    [Range(1, 15)]
+    public int MaxTransactionRetryTimeSeconds { get; init; }
 }

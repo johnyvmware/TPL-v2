@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -22,12 +22,14 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.7" />
     <PackageReference Include="OpenAI" Version="2.2.0" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="System.Threading.Tasks.Dataflow" Version="9.0.7" />
     <PackageReference Include="Neo4j.Driver" Version="5.28.2" />
     <PackageReference Include="Neo4j.Driver.Reactive" Version="5.28.2" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
+
     <!-- Explicit packages to resolve security vulnerabilities -->
     <PackageReference Include="System.Text.Json" Version="9.0.7" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />

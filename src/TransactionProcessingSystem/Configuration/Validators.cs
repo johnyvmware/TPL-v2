@@ -1,0 +1,19 @@
+using Microsoft.Extensions.Options;
+
+namespace TransactionProcessingSystem.Configuration;
+
+/// <summary>
+/// Validator for Max Degree Of Parallelism settings.
+/// </summary>
+public sealed class MaxDegreeOfParallelismValidator : IValidateOptions<PipelineSettings>
+{
+    public ValidateOptionsResult Validate(string? name, PipelineSettings options)
+    {
+        if (options.MaxDegreeOfParallelism > Environment.ProcessorCount)
+        {
+            ValidateOptionsResult.Fail($"Pipeline.MaxDegreeOfParallelism must not exceed processor count {Environment.ProcessorCount}");
+        }
+
+        return ValidateOptionsResult.Success;
+    }
+}

@@ -81,7 +81,6 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         }
     }
 
-    // Using true async enumerator pattern for better streaming performance
     private async IAsyncEnumerable<EmailMatch> SearchRelevantEmailsAsync(
         Transaction transaction,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)

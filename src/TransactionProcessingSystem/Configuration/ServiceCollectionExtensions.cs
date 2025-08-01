@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Components;
+using TransactionProcessingSystem.Pipeline;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -13,48 +14,18 @@ namespace TransactionProcessingSystem.Configuration;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds and configures all application settings and secrets with comprehensive validation.
-    /// Keeps settings and secrets separate as requested.
+    /// Adds and configures all application settings and secrets with validation.
     /// </summary>
     public static IServiceCollection AddApplicationConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
-        // Configure application settings (non-secrets)
-        services.Configure<AppSettings>(configuration);
-        services.Configure<OpenAISettings>(configuration.GetSection("OpenAI"));
-        services.Configure<MicrosoftGraphSettings>(configuration.GetSection("MicrosoftGraph"));
-        services.Configure<TransactionApiSettings>(configuration.GetSection("TransactionApi"));
-        services.Configure<ExportSettings>(configuration.GetSection("Export"));
-        services.Configure<PipelineSettings>(configuration.GetSection("Pipeline"));
-        services.Configure<Neo4jSettings>(configuration.GetSection("Neo4j"));
-
-        // Configure secrets separately (from User Secrets in dev, Environment Variables in prod)
-        services.Configure<SecretsSettings>(configuration);
-        services.Configure<OpenAISecrets>(configuration.GetSection("Secrets:OpenAI"));
-        services.Configure<MicrosoftGraphSecrets>(configuration.GetSection("Secrets:MicrosoftGraph"));
-        services.Configure<Neo4jSecrets>(configuration.GetSection("Secrets:Neo4j"));
-
-        // Register all individual validators
-        services.AddSingleton<IValidateOptions<OpenAISettings>, OpenAISettingsValidator>();
-        services.AddSingleton<IValidateOptions<MicrosoftGraphSettings>, MicrosoftGraphSettingsValidator>();
-        services.AddSingleton<IValidateOptions<TransactionApiSettings>, TransactionApiSettingsValidator>();
-        services.AddSingleton<IValidateOptions<ExportSettings>, ExportSettingsValidator>();
-        services.AddSingleton<IValidateOptions<PipelineSettings>, PipelineSettingsValidator>();
-        services.AddSingleton<IValidateOptions<Neo4jSettings>, Neo4jSettingsValidator>();
-
-        services.AddSingleton<IValidateOptions<OpenAISecrets>, OpenAISecretsValidator>();
-        services.AddSingleton<IValidateOptions<MicrosoftGraphSecrets>, MicrosoftGraphSecretsValidator>();
-        services.AddSingleton<IValidateOptions<Neo4jSecrets>, Neo4jSecretsValidator>();
-
-        // Register composite validators that handle all nested settings gracefully
-        services.AddSingleton<IValidateOptions<AppSettings>, AppSettingsValidator>();
-        services.AddSingleton<IValidateOptions<SecretsSettings>, SecretsSettingsValidator>();
+        ConfigureAppSettings(services, configuration);
+        ConfigureAppSecrets(services, configuration);
 
         return services;
     }
 
     /// <summary>
     /// Adds Neo4j services including driver, data access, and background service.
-    /// Follows SRP by keeping all Neo4j concerns together.
     /// </summary>
     public static IServiceCollection AddNeo4jServices(this IServiceCollection services, IConfiguration configuration)
     {
@@ -79,23 +50,6 @@ public static class ServiceCollectionExtensions
         // Register Neo4j data access services
         services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
 
-
-        // Register Neo4j background service
-        services.AddHostedService<Neo4jBackgroundService>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds all processors including Neo4j exporter.
-    /// </summary>
-    public static IServiceCollection AddProcessors(this IServiceCollection services)
-    {
-        // Register all processors - Neo4jExporter is now registered in AddTransactionProcessingServices
-
-        // Other processors can be added here
-        // Example: services.AddScoped<ValidationProcessor>();
-
         return services;
     }
 
@@ -113,13 +67,66 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TransactionProcessor>();
         services.AddScoped<EmailEnricher>();
         services.AddScoped<Categorizer>();
+        services.AddScoped<Neo4jExporter>();
 
         // Transaction processing pipeline
         services.AddScoped<TransactionPipeline>();
 
-        // Other transaction processing services
-        services.AddScoped<TransactionProcessingSystem.Services.TransactionPipeline>();
-
         return services;
+    }
+
+    private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)
+    {
+        services
+            .AddOptions<SecretsSettings>()
+            .Bind(configuration);
+
+        services
+            .AddOptionsWithValidateOnStart<OpenAISecrets>()
+            .Bind(configuration.GetSection("Secrets:OpenAI"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<MicrosoftGraphSecrets>()
+            .Bind(configuration.GetSection("Secrets:MicrosoftGraph"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<Neo4jSecrets>()
+            .Bind(configuration.GetSection("Secrets:Neo4j"))
+            .ValidateDataAnnotations();
+    }
+
+    private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
+    {
+        services
+            .AddOptions<AppSettings>()
+            .Bind(configuration);
+
+        services
+            .AddOptionsWithValidateOnStart<OpenAISettings>()
+            .Bind(configuration.GetSection("OpenAI"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<MicrosoftGraphSettings>()
+            .Bind(configuration.GetSection("MicrosoftGraph"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<ExportSettings>()
+            .Bind(configuration.GetSection("Export"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddSingleton<IValidateOptions<PipelineSettings>, MaxDegreeOfParallelismValidator>()
+            .AddOptionsWithValidateOnStart<PipelineSettings>()
+            .Bind(configuration.GetSection("Pipeline"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<Neo4jSettings>()
+            .Bind(configuration.GetSection("Neo4j"))
+            .ValidateDataAnnotations();
     }
 }

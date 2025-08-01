@@ -1,5 +1,6 @@
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
@@ -24,7 +25,7 @@ public class TransactionPipeline : IDisposable
         EmailEnricher enricher,
         Categorizer categorizer,
         Neo4jExporter neo4jExporter,
-        PipelineSettings settings,
+        IOptions<PipelineSettings> settings,
         ILogger<TransactionPipeline> logger)
     {
         _fetcher = fetcher;
@@ -33,8 +34,8 @@ public class TransactionPipeline : IDisposable
         _enricher = enricher;
         _categorizer = categorizer;
         _neo4jExporter = neo4jExporter;
-        _settings = settings;
         _logger = logger;
+        _settings = settings.Value;
 
         ConnectPipeline();
     }
@@ -46,7 +47,7 @@ public class TransactionPipeline : IDisposable
             transactions => transactions,
             new ExecutionDataflowBlockOptions
             {
-                BoundedCapacity = _settings.BoundedCapacity,
+                BoundedCapacity = _settings.InputBufferCapacity,
                 MaxDegreeOfParallelism = _settings.MaxDegreeOfParallelism
             });
 

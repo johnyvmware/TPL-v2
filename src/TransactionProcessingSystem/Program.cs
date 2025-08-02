@@ -4,8 +4,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Components;
+using System.Text;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+// Register code pages for Windows-1250 encoding support
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 // Configure application settings and secrets with validation
 builder.Services.AddApplicationConfiguration(builder.Configuration);
@@ -18,5 +22,9 @@ builder.Services.AddTransactionProcessingServices();
 
 var host = builder.Build();
 
-// Run the application
-await host.RunAsync();
+using var scope = host.Services.CreateScope();
+var transactionFetcher = scope.ServiceProvider.GetRequiredService<TransactionFetcher>();
+await transactionFetcher.FetchTransactionsAsync();
+
+// Optionally, run the host if you still want to keep the background services running
+// await host.RunAsync();

@@ -21,6 +21,11 @@ public class TransactionFetcher : ProcessorBase<string, string>
         _settings = settings.Value;
     }
 
+    public async Task FetchTransactionsAsync()
+    {
+        var transactions = await ProcessAsync(string.Empty);
+    }
+
     protected override async Task<string> ProcessAsync(string endpoint)
     {
         var transactions = new List<BankTransaction>();

@@ -35,9 +35,9 @@ public static class ServiceCollectionExtensions
             var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
 
-            var authToken = AuthTokens.Basic(neo4jSecrets.Username, neo4jSecrets.Password);
+            var authToken = AuthTokens.Basic(neo4jSecrets.User, neo4jSecrets.Password);
 
-            var driver = GraphDatabase.Driver(neo4jSecrets.ConnectionUri, authToken, config =>
+            var driver = GraphDatabase.Driver(neo4jSecrets.Uri, authToken, config =>
             {
                 config.WithMaxConnectionPoolSize(neo4jSettings.MaxConnectionPoolSize)
                       .WithConnectionTimeout(TimeSpan.FromSeconds(neo4jSettings.ConnectionTimeoutSeconds))
@@ -83,17 +83,17 @@ public static class ServiceCollectionExtensions
 
         services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
-            .Bind(configuration.GetSection("Secrets:OpenAI"))
+            .Bind(configuration.GetSection("OpenAI"))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<MicrosoftGraphSecrets>()
-            .Bind(configuration.GetSection("Secrets:MicrosoftGraph"))
+            .Bind(configuration.GetSection("MicrosoftGraph"))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<Neo4jSecrets>()
-            .Bind(configuration.GetSection("Secrets:Neo4j"))
+            .Bind(configuration.GetSection("Neo4j"))
             .ValidateDataAnnotations();
     }
 
@@ -127,6 +127,11 @@ public static class ServiceCollectionExtensions
         services
             .AddOptionsWithValidateOnStart<Neo4jSettings>()
             .Bind(configuration.GetSection("Neo4j"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<TransactionFetcherSettings>()
+            .Bind(configuration.GetSection("TransactionFetcher"))
             .ValidateDataAnnotations();
     }
 }

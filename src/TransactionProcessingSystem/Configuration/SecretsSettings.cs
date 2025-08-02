@@ -43,10 +43,10 @@ public record MicrosoftGraphSecrets
 public record Neo4jSecrets
 {
     [Required]
-    public required string ConnectionUri { get; init; }
+    public required string Uri { get; init; }
 
     [Required]
-    public required string Username { get; init; }
+    public required string User { get; init; }
 
     [Required]
     public required string Password { get; init; }

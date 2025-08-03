@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text.Json;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
@@ -7,27 +5,21 @@ using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
-namespace TransactionProcessingSystem.Components;
-
-public class TransactionFetcher : ProcessorBase<string, string>
+public class TransactionFetcherV2
 {
     private readonly TransactionFetcherSettings _settings;
+    private readonly ILogger<TransactionFetcherV2> _logger;
 
-    public TransactionFetcher(
+    public TransactionFetcherV2(
         IOptions<TransactionFetcherSettings> settings,
-        ILogger<TransactionFetcher> logger,
-        int boundedCapacity = 100)
-        : base(logger, boundedCapacity)
+        ILogger<TransactionFetcherV2> logger)
     {
         _settings = settings.Value;
+        _logger = logger;
     }
 
-    public async Task FetchTransactionsAsync()
-    {
-        var transactions = await ProcessAsync(string.Empty);
-    }
-
-   protected override Task<string> ProcessAsync(string endpoint)
+    // This should work per file, the fetcher
+    public List<BankTransaction> FetchTransactions()
     {
         var allTransactions = new List<BankTransaction>();
         var badRecords = new List<string>();
@@ -53,7 +45,6 @@ public class TransactionFetcher : ProcessorBase<string, string>
                     }
                     else
                     {
-                        // Record is null - treat as metadata/bad data
                         _logger.LogDebug("Skipping null record (likely metadata) in {File}", file);
                         badRecords.Add(csv.Context?.Parser?.RawRecord ?? string.Empty);
                     }
@@ -69,9 +60,8 @@ public class TransactionFetcher : ProcessorBase<string, string>
             _logger.LogInformation("Successfully processed {Count} transactions from {File}", fileTransactions.Count, file);
         }
 
-        _logger.LogInformation("Processing complete. Total transactions: {Total}, Bad records: {Bad}", 
-            allTransactions.Count, badRecords.Count);
+        _logger.LogInformation("Processing complete. Total transactions: {Total}, Bad records: {Bad}", allTransactions.Count, badRecords.Count);
 
-        return Task.FromResult(allTransactions.First().AccountNumber ?? string.Empty);
+        return allTransactions;
     }
 }

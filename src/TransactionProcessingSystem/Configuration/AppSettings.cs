@@ -123,9 +123,5 @@ public record TransactionFetcherSettings
     public required string InputDirectory { get; init; }
 
     [Required]
-    [Range(1, int.MaxValue)]
-    public required int MetadataLineCount { get; init; }
-
-    [Required]
     public required string Encoding { get; init; }
 }

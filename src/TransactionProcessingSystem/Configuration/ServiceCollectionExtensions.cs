@@ -68,6 +68,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EmailEnricher>();
         services.AddScoped<Categorizer>();
         services.AddScoped<Neo4jExporter>();
+        services.AddScoped<OpenAiCategorizer>();
+        services.AddScoped<TransactionFetcherV2>();
 
         // Transaction processing pipeline
         services.AddScoped<TransactionPipeline>();

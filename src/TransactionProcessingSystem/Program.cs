@@ -23,8 +23,11 @@ builder.Services.AddTransactionProcessingServices();
 var host = builder.Build();
 
 using var scope = host.Services.CreateScope();
-var transactionFetcher = scope.ServiceProvider.GetRequiredService<TransactionFetcher>();
-await transactionFetcher.FetchTransactionsAsync();
+var transactionFetcher = scope.ServiceProvider.GetRequiredService<TransactionFetcherV2>();
+var list = transactionFetcher.FetchTransactions();
+
+var categorizer = scope.ServiceProvider.GetRequiredService<OpenAiCategorizer>();
+await categorizer.CategorizeTransactionAsync(list[0]);
 
 // Optionally, run the host if you still want to keep the background services running
 // await host.RunAsync();

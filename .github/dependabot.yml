@@ -9,7 +9,7 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     assignees:
-      - "@johnyvmware"
+      - johnyvmware
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"

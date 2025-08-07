@@ -1,7 +1,10 @@
-# This is a comment.
-# Each line is a file pattern followed by one or more owners.
+# These owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence, @johnyvmware will be requested for review when someone opens a pull request.
 
-# These owners will be the default owners for everything in
-# the repo. Unless a later match takes precedence,
-# @johnyvmware will be requested for review when someone opens a pull request.
-*       @johnyvmware 
+# To use a CODEOWNERS file:
+
+# Create a file named CODEOWNERS in the .github/, root, or docs/ directory of your repository.
+# Define patterns to match files or directories, followed by GitHub usernames or team names (e.g., *.js @username).
+# Ensure code owners have write permissions to the repository.
+
+* @johnyvmware

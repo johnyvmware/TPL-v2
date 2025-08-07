@@ -13,6 +13,7 @@ public record AppSettings
     public required ExportSettings Export { get; init; }
     public required PipelineSettings Pipeline { get; init; }
     public required Neo4jSettings Neo4j { get; init; }
+    public required TransactionFetcherSettings TransactionFetcher { get; init; }
 }
 
 /// <summary>
@@ -29,7 +30,7 @@ public record OpenAISettings
 
     [Required]
     [Range(0, 2)]
-    public required double Temperature { get; init; }
+    public required float Temperature { get; init; }
 }
 
 /// <summary>
@@ -114,4 +115,13 @@ public record Neo4jSettings
     [Required]
     [Range(1, 15)]
     public int MaxTransactionRetryTimeSeconds { get; init; }
+}
+
+public record TransactionFetcherSettings
+{
+    [Required]
+    public required string InputDirectory { get; init; }
+
+    [Required]
+    public required string Encoding { get; init; }
 }

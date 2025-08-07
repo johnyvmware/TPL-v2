@@ -29,6 +29,7 @@
     <PackageReference Include="Neo4j.Driver" Version="5.28.2" />
     <PackageReference Include="Neo4j.Driver.Reactive" Version="5.28.2" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0" />
 
     <!-- Explicit packages to resolve security vulnerabilities -->
     <PackageReference Include="System.Text.Json" Version="9.0.7" />

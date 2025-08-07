@@ -110,7 +110,7 @@ public class MockTransactionApiService : BackgroundService
         response.OutputStream.Close();
     }
 
-    private IEnumerable<RawTransaction> GenerateMockTransactions()
+    private IEnumerable<Models.RawTransactionOld> GenerateMockTransactions()
     {
         var random = new Random();
         var merchants = new[]
@@ -132,7 +132,7 @@ public class MockTransactionApiService : BackgroundService
             "Home Depot Hardware Store"
         };
 
-        var transactions = new List<RawTransaction>();
+        var transactions = new List<Models.RawTransactionOld>();
         var baseDate = DateTime.Today.AddDays(-30);
 
         for (int i = 0; i < 20; i++)
@@ -141,7 +141,7 @@ public class MockTransactionApiService : BackgroundService
             var amount = (decimal)(random.NextDouble() * 200 + 5); // $5-$205
             var date = baseDate.AddDays(random.Next(60)); // Within last 30 days to next 30 days
 
-            transactions.Add(new RawTransaction
+            transactions.Add(new Models.RawTransactionOld
             {
                 Id = Guid.NewGuid().ToString(),
                 Date = date.ToString("yyyy-MM-dd"),

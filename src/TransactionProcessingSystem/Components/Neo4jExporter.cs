@@ -8,7 +8,7 @@ namespace TransactionProcessingSystem.Components;
 /// <summary>
 /// Neo4j exporter that stores transactions in a graph database and creates relationships
 /// </summary>
-public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
+public class Neo4jExporter : ProcessorBase<TransactionOld, TransactionOld>
 {
     private readonly INeo4jDataAccess _neo4jDataAccess;
 
@@ -21,7 +21,7 @@ public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
         _neo4jDataAccess = neo4jDataAccess ?? throw new ArgumentNullException(nameof(neo4jDataAccess));
     }
 
-    protected override async Task<Transaction> ProcessAsync(Transaction transaction)
+    protected override async Task<TransactionOld> ProcessAsync(TransactionOld transaction)
     {
         _logger.LogDebug("Processing transaction {Id} for Neo4j storage", transaction.Id);
 
@@ -54,7 +54,7 @@ public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
     }
 
     // Additional methods expected by other parts of the codebase
-    public async ValueTask<Transaction> ProcessItemAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    public async ValueTask<TransactionOld> ProcessItemAsync(TransactionOld transaction, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -88,8 +88,8 @@ public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
         }
     }
 
-    public async IAsyncEnumerable<Transaction> FindSimilarTransactionsAsync(
-        Transaction referenceTransaction,
+    public async IAsyncEnumerable<TransactionOld> FindSimilarTransactionsAsync(
+        TransactionOld referenceTransaction,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Finding similar transactions for {TransactionId}", referenceTransaction.Id);
@@ -124,8 +124,8 @@ public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
         }
     }
 
-    public async IAsyncEnumerable<Transaction> ProcessTransactionsBatchAsync(
-        IAsyncEnumerable<Transaction> transactions,
+    public async IAsyncEnumerable<TransactionOld> ProcessTransactionsBatchAsync(
+        IAsyncEnumerable<TransactionOld> transactions,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting batch processing of transactions to Neo4j");
@@ -134,7 +134,7 @@ public class Neo4jExporter : ProcessorBase<Transaction, Transaction>
         {
             var status = result.IsSuccess ? ProcessingStatus.Processed : ProcessingStatus.Failed;
 
-            yield return new Transaction
+            yield return new TransactionOld
             {
                 Id = result.TransactionId,
                 Status = status,

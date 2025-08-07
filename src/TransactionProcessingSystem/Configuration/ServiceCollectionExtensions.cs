@@ -4,7 +4,8 @@ using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Components;
-using TransactionProcessingSystem.Pipeline;
+using System.Text;
+using OpenAI.Chat;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -21,6 +22,37 @@ public static class ServiceCollectionExtensions
         ConfigureAppSettings(services, configuration);
         ConfigureAppSecrets(services, configuration);
 
+        // Register code pages for Windows-1250 encoding support
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+        return services;
+    }
+
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddChatClient();
+
+        services.AddScoped<Fetcher>();
+        services.AddScoped<TitleFormatter>();
+        //services.AddScoped<TransactionParser>();
+        //services.AddScoped<TransactionProcessor>();
+        //services.AddScoped<EmailEnricher>();
+        //services.AddScoped<Neo4jExporter>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddChatClient(this IServiceCollection services)
+    {
+        // Register OpenAI client
+        services.AddSingleton(serviceProvider =>
+        {
+            var openAISettings = serviceProvider.GetRequiredService<IOptions<OpenAISettings>>().Value;
+            var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+
+            return new ChatClient(openAISettings.Model, openAISecrets.ApiKey);
+        });
+
         return services;
     }
 
@@ -35,9 +67,9 @@ public static class ServiceCollectionExtensions
             var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
 
-            var authToken = AuthTokens.Basic(neo4jSecrets.Username, neo4jSecrets.Password);
+            var authToken = AuthTokens.Basic(neo4jSecrets.User, neo4jSecrets.Password);
 
-            var driver = GraphDatabase.Driver(neo4jSecrets.ConnectionUri, authToken, config =>
+            var driver = GraphDatabase.Driver(neo4jSecrets.Uri, authToken, config =>
             {
                 config.WithMaxConnectionPoolSize(neo4jSettings.MaxConnectionPoolSize)
                       .WithConnectionTimeout(TimeSpan.FromSeconds(neo4jSettings.ConnectionTimeoutSeconds))
@@ -53,28 +85,6 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>
-    /// Adds transaction processing services including pipeline and all components.
-    /// </summary>
-    public static IServiceCollection AddTransactionProcessingServices(this IServiceCollection services)
-    {
-        // Add HttpClient for TransactionFetcher
-        services.AddHttpClient<TransactionFetcher>();
-
-        // Register all pipeline components
-        services.AddScoped<TransactionFetcher>();
-        services.AddScoped<TransactionParser>();
-        services.AddScoped<TransactionProcessor>();
-        services.AddScoped<EmailEnricher>();
-        services.AddScoped<Categorizer>();
-        services.AddScoped<Neo4jExporter>();
-
-        // Transaction processing pipeline
-        services.AddScoped<TransactionPipeline>();
-
-        return services;
-    }
-
     private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)
     {
         services
@@ -83,17 +93,17 @@ public static class ServiceCollectionExtensions
 
         services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
-            .Bind(configuration.GetSection("Secrets:OpenAI"))
+            .Bind(configuration.GetSection("OpenAI"))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<MicrosoftGraphSecrets>()
-            .Bind(configuration.GetSection("Secrets:MicrosoftGraph"))
+            .Bind(configuration.GetSection("MicrosoftGraph"))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<Neo4jSecrets>()
-            .Bind(configuration.GetSection("Secrets:Neo4j"))
+            .Bind(configuration.GetSection("Neo4j"))
             .ValidateDataAnnotations();
     }
 
@@ -127,6 +137,11 @@ public static class ServiceCollectionExtensions
         services
             .AddOptionsWithValidateOnStart<Neo4jSettings>()
             .Bind(configuration.GetSection("Neo4j"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<TransactionFetcherSettings>()
+            .Bind(configuration.GetSection("TransactionFetcher"))
             .ValidateDataAnnotations();
     }
 }

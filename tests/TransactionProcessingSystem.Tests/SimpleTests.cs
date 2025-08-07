@@ -11,7 +11,7 @@ public class SimpleTests
     public void Transaction_Constructor_CreatesValidTransaction()
     {
         // Arrange & Act
-        var transaction = new Transaction
+        var transaction = new TransactionOld
         {
             Id = "1",
             Date = DateTime.Today,

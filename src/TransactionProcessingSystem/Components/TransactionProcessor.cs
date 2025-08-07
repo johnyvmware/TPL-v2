@@ -5,7 +5,7 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Components;
 
-public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
+public class TransactionProcessor : ProcessorBase<TransactionOld, TransactionOld>
 {
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex SpecialCharsRegex = new(@"[^\w\s\-\.\,\$\&\@\#\%\(\)]", RegexOptions.Compiled);
@@ -17,7 +17,7 @@ public class TransactionProcessor : ProcessorBase<Transaction, Transaction>
     {
     }
 
-    protected override Task<Transaction> ProcessAsync(Transaction transaction)
+    protected override Task<TransactionOld> ProcessAsync(TransactionOld transaction)
     {
         _logger.LogDebug("Processing transaction {Id}: {Description}",
             transaction.Id, transaction.Description);

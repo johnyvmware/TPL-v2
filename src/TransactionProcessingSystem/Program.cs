@@ -1,33 +1,33 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Components;
-using System.Text;
+using TransactionProcessingSystem.Models;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Register code pages for Windows-1250 encoding support
-Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-
-// Configure application settings and secrets with validation
+// Configure application settings and secrets
 builder.Services.AddApplicationConfiguration(builder.Configuration);
 
-// Configure Neo4j services
-builder.Services.AddNeo4jServices(builder.Configuration);
-
-// Add transaction processing services
-builder.Services.AddTransactionProcessingServices();
+// Configure application services
+builder.Services.AddApplicationServices();
 
 var host = builder.Build();
 
 using var scope = host.Services.CreateScope();
-var transactionFetcher = scope.ServiceProvider.GetRequiredService<TransactionFetcherV2>();
-var list = transactionFetcher.FetchTransactions();
 
-var categorizer = scope.ServiceProvider.GetRequiredService<OpenAiCategorizer>();
-await categorizer.CategorizeTransactionAsync(list[0]);
+var fetcher = scope.ServiceProvider.GetRequiredService<Fetcher>();
+var titleFormatter = scope.ServiceProvider.GetRequiredService<TitleFormatter>();
 
-// Optionally, run the host if you still want to keep the background services running
-// await host.RunAsync();
+List<RawTransaction> transactions = fetcher.FetchTransactions();
+List<Transaction> transactionWithFormatterTitle = [];
+foreach (var transaction in transactions)
+{
+    Transaction? formattedTransaction = await titleFormatter.CategorizeTransactionAsync(transaction).ConfigureAwait(false);
+    if (formattedTransaction != null)
+    {
+        transactionWithFormatterTitle.Add(formattedTransaction);
+    }
+}
+
+Console.ReadLine();

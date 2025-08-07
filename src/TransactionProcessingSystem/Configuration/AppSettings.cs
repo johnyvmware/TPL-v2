@@ -30,7 +30,7 @@ public record OpenAISettings
 
     [Required]
     [Range(0, 2)]
-    public required double Temperature { get; init; }
+    public required float Temperature { get; init; }
 }
 
 /// <summary>

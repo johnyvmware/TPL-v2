@@ -21,20 +21,20 @@ public interface INeo4jDataAccess
     /// <summary>
     /// Creates or updates a transaction node in the graph with proper relationships
     /// </summary>
-    ValueTask<string> UpsertTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default);
+    ValueTask<string> UpsertTransactionAsync(TransactionOld transaction, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Streams multiple transaction upserts with async enumerable for high performance
     /// </summary>
     IAsyncEnumerable<TransactionResult> UpsertTransactionsAsync(
-        IAsyncEnumerable<Transaction> transactions,
+        IAsyncEnumerable<TransactionOld> transactions,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Streams similar transactions for a given transaction using async enumerable
     /// </summary>
-    IAsyncEnumerable<Transaction> FindSimilarTransactionsAsync(
-        Transaction transaction,
+    IAsyncEnumerable<TransactionOld> FindSimilarTransactionsAsync(
+        TransactionOld transaction,
         CancellationToken cancellationToken = default);
 
     /// <summary>

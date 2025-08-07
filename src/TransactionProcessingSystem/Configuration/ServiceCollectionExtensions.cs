@@ -4,7 +4,8 @@ using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Components;
-using TransactionProcessingSystem.Pipeline;
+using System.Text;
+using OpenAI.Chat;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -20,6 +21,37 @@ public static class ServiceCollectionExtensions
     {
         ConfigureAppSettings(services, configuration);
         ConfigureAppSecrets(services, configuration);
+
+        // Register code pages for Windows-1250 encoding support
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+        return services;
+    }
+
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddChatClient();
+
+        services.AddScoped<Fetcher>();
+        services.AddScoped<TitleFormatter>();
+        //services.AddScoped<TransactionParser>();
+        //services.AddScoped<TransactionProcessor>();
+        //services.AddScoped<EmailEnricher>();
+        //services.AddScoped<Neo4jExporter>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddChatClient(this IServiceCollection services)
+    {
+        // Register OpenAI client
+        services.AddSingleton(serviceProvider =>
+        {
+            var openAISettings = serviceProvider.GetRequiredService<IOptions<OpenAISettings>>().Value;
+            var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+
+            return new ChatClient(openAISettings.Model, openAISecrets.ApiKey);
+        });
 
         return services;
     }
@@ -49,30 +81,6 @@ public static class ServiceCollectionExtensions
 
         // Register Neo4j data access services
         services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds transaction processing services including pipeline and all components.
-    /// </summary>
-    public static IServiceCollection AddTransactionProcessingServices(this IServiceCollection services)
-    {
-        // Add HttpClient for TransactionFetcher
-        services.AddHttpClient<TransactionFetcher>();
-
-        // Register all pipeline components
-        services.AddScoped<TransactionFetcher>();
-        services.AddScoped<TransactionParser>();
-        services.AddScoped<TransactionProcessor>();
-        services.AddScoped<EmailEnricher>();
-        services.AddScoped<Categorizer>();
-        services.AddScoped<Neo4jExporter>();
-        services.AddScoped<OpenAiCategorizer>();
-        services.AddScoped<TransactionFetcherV2>();
-
-        // Transaction processing pipeline
-        services.AddScoped<TransactionPipeline>();
 
         return services;
     }

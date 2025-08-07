@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace TransactionProcessingSystem.Components;
 
-public class EmailEnricher : ProcessorBase<Transaction, Transaction>
+public class EmailEnricher : ProcessorBase<TransactionOld, TransactionOld>
 {
     private readonly GraphServiceClient _graphClient;
     private readonly MicrosoftGraphSettings _settings;
@@ -28,7 +28,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         _graphClient = CreateGraphClient();
     }
 
-    protected override async Task<Transaction> ProcessAsync(Transaction transaction)
+    protected override async Task<TransactionOld> ProcessAsync(TransactionOld transaction)
     {
         _logger.LogDebug("Enriching transaction {Id} with email data", transaction.Id);
 
@@ -82,7 +82,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
     }
 
     private async IAsyncEnumerable<EmailMatch> SearchRelevantEmailsAsync(
-        Transaction transaction,
+        TransactionOld transaction,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var startDate = transaction.Date.AddDays(-_settings.EmailSearchDays);
@@ -132,7 +132,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         }
     }
 
-    private async Task<EmailMatch?> FindBestEmailMatchAsync(Transaction transaction)
+    private async Task<EmailMatch?> FindBestEmailMatchAsync(TransactionOld transaction)
     {
         EmailMatch? bestEmail = null;
         var bestScore = 0.0;
@@ -151,7 +151,7 @@ public class EmailEnricher : ProcessorBase<Transaction, Transaction>
         return bestScore > 0 ? bestEmail : null;
     }
 
-    private double CalculateMatchScore(Transaction transaction, EmailMatch email)
+    private double CalculateMatchScore(TransactionOld transaction, EmailMatch email)
     {
         double score = 0;
 

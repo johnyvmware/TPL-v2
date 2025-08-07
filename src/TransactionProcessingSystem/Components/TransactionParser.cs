@@ -3,7 +3,9 @@ using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Models;
 
-public class TransactionParser : ProcessorBase<string, IEnumerable<Transaction>>
+namespace TransactionProcessingSystem.Components;
+
+public class TransactionParser : ProcessorBase<string, IEnumerable<TransactionOld>>
 {
     public TransactionParser(
         ILogger<TransactionParser> logger,
@@ -12,7 +14,7 @@ public class TransactionParser : ProcessorBase<string, IEnumerable<Transaction>>
     {
     }
 
-    protected override Task<IEnumerable<Transaction>> ProcessAsync(string jsonResponse)
+    protected override Task<IEnumerable<TransactionOld>> ProcessAsync(string jsonResponse)
     {
         _logger.LogDebug("Parsing transactions from JSON response");
 
@@ -30,7 +32,7 @@ public class TransactionParser : ProcessorBase<string, IEnumerable<Transaction>>
     }
 
     // Parse transaction in separate block and made synchronous since there's no async code
-    private IEnumerable<Transaction> ParseTransactions(string jsonResponse)
+    private IEnumerable<TransactionOld> ParseTransactions(string jsonResponse)
     {
         var options = new JsonSerializerOptions
         {
@@ -42,7 +44,7 @@ public class TransactionParser : ProcessorBase<string, IEnumerable<Transaction>>
         if (apiResponse?.Transactions == null)
         {
             _logger.LogWarning("No transactions found in API response");
-            return Enumerable.Empty<Transaction>();
+            return Enumerable.Empty<TransactionOld>();
         }
 
         var transactions = apiResponse.Transactions.Select(raw =>
@@ -59,7 +61,7 @@ public class TransactionParser : ProcessorBase<string, IEnumerable<Transaction>>
                 amount = 0m;
             }
 
-            return new Transaction
+            return new TransactionOld
             {
                 Id = raw.Id,
                 Date = date,

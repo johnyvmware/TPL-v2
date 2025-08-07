@@ -112,7 +112,7 @@ public sealed class Neo4jDataAccess(
         }
     }
 
-    public async ValueTask<string> UpsertTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    public async ValueTask<string> UpsertTransactionAsync(TransactionOld transaction, CancellationToken cancellationToken = default)
     {
         const string cypher = """
             // Create or get the database version node
@@ -225,7 +225,7 @@ public sealed class Neo4jDataAccess(
     }
 
     public async IAsyncEnumerable<TransactionResult> UpsertTransactionsAsync(
-        IAsyncEnumerable<Transaction> transactions,
+        IAsyncEnumerable<TransactionOld> transactions,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await using var session = driver.AsyncSession(ConfigureSession(AccessMode.Write));
@@ -249,8 +249,8 @@ public sealed class Neo4jDataAccess(
         }
     }
 
-    public async IAsyncEnumerable<Transaction> FindSimilarTransactionsAsync(
-        Transaction transaction,
+    public async IAsyncEnumerable<TransactionOld> FindSimilarTransactionsAsync(
+        TransactionOld transaction,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         const string cypher = """
@@ -283,7 +283,7 @@ public sealed class Neo4jDataAccess(
         await foreach (var record in ExecuteQueryInternalAsync(session, cypher, parameters, cancellationToken))
         {
             yield return record.TryGetValue("id", out var id) && id is not null
-                ? new Transaction
+                ? new TransactionOld
                 {
                     Id = id.ToString()!,
                     Date = DateTime.TryParse(record.TryGetValue("date", out var date) ? date?.ToString() : null, out var dateValue) ? dateValue : DateTime.UtcNow,
@@ -441,7 +441,7 @@ public sealed class Neo4jDataAccess(
 
     private async ValueTask<string> UpsertSingleTransactionInSession(
         IAsyncSession session,
-        Transaction transaction,
+        TransactionOld transaction,
         CancellationToken cancellationToken)
     {
         const string cypher = """
@@ -600,7 +600,7 @@ public sealed class Neo4jDataAccess(
 
     private static string GetDatabaseVersion() => $"v{DateTime.UtcNow:yyyy.MM.dd}";
 
-    private static string GenerateTransactionHash(Transaction transaction)
+    private static string GenerateTransactionHash(TransactionOld transaction)
     {
         var content = $"{transaction.Id}_{transaction.Amount}_{transaction.Description}_{transaction.Date:yyyy-MM-dd}";
         using var sha256 = System.Security.Cryptography.SHA256.Create();

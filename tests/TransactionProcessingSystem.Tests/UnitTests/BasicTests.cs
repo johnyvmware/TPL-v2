@@ -11,7 +11,7 @@ public class BasicTests
     public void Transaction_Constructor_CreatesValidTransaction()
     {
         // Arrange & Act
-        var transaction = new Transaction
+        var transaction = new TransactionOld
         {
             Id = "1",
             Date = DateTime.Today,
@@ -31,7 +31,7 @@ public class BasicTests
     public void Transaction_WithRecord_ShouldCreateCorrectObject()
     {
         // Arrange
-        var originalTransaction = new Transaction
+        var originalTransaction = new TransactionOld
         {
             Id = "original-id",
             Date = DateTime.Today,
@@ -68,7 +68,7 @@ public class BasicTests
     public void Transaction_Status_ShouldAcceptAllValidValues(ProcessingStatus status)
     {
         // Arrange & Act
-        var transaction = new Transaction
+        var transaction = new TransactionOld
         {
             Id = "test-id",
             Date = DateTime.Today,
@@ -85,7 +85,7 @@ public class BasicTests
     public void Transaction_WithNullCategory_ShouldBeValid()
     {
         // Arrange & Act
-        var transaction = new Transaction
+        var transaction = new TransactionOld
         {
             Id = "test-id",
             Date = DateTime.Today,
@@ -104,7 +104,7 @@ public class BasicTests
     public void Transaction_WithEmptyCategory_ShouldBeValid()
     {
         // Arrange & Act
-        var transaction = new Transaction
+        var transaction = new TransactionOld
         {
             Id = "test-id",
             Date = DateTime.Today,

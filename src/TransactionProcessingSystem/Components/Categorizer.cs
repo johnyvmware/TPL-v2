@@ -92,12 +92,21 @@ public class Categorizer(
         };
     }
 
+    // This is still wrong, somehow the json is not picked up correctly
     private async Task<BinaryData> GetJsonSchemaAsync()
     {
         string schemaPath = Path.Combine(AppContext.BaseDirectory, _llmSettings.StructuredOutputs.Path, _llmSettings.StructuredOutputs.Categorizer);
         string fileName = Path.GetFileNameWithoutExtension(schemaPath);
 
+        // Read the JSON file
         await using FileStream stream = File.OpenRead(schemaPath);
-        return await BinaryData.FromStreamAsync(stream).ConfigureAwait(false);
+
+        // Parse as JsonDocument - possible to define a schema file as an object in C#
+        using JsonDocument doc = await JsonDocument.ParseAsync(stream);
+
+        // Convert to binary
+        byte[] binaryData = JsonSerializer.SerializeToUtf8Bytes(doc.RootElement);
+
+        return await BinaryData.FromStreamAsync(stream);
     }
 }

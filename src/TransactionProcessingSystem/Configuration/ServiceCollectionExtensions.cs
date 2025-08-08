@@ -47,10 +47,10 @@ public static class ServiceCollectionExtensions
         // Register OpenAI client
         services.AddSingleton(serviceProvider =>
         {
-            var openAISettings = serviceProvider.GetRequiredService<IOptions<OpenAI>>().Value;
+            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmSettings>>().Value;
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
-            return new ChatClient(openAISettings.Model, openAISecrets.ApiKey);
+            return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
         });
 
         return services;

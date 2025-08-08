@@ -12,12 +12,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="llm\**\*">
+    <Content Include="..\..\llm\**\*">
+      <Link>llm\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="data\**\*.csv">
+    </Content>
+    <Content Include="..\..\data\**\*.csv">
+      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

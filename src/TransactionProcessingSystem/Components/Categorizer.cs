@@ -78,7 +78,7 @@ public class Categorizer(
 
     private async Task<ChatCompletionOptions> CreateChatCompletionOptions()
     {
-        string jsonSchemaName = Path.GetFileNameWithoutExtension(_llmSettings.Outputs.Categorizer);
+        string jsonSchemaName = Path.GetFileNameWithoutExtension(_llmSettings.StructuredOutputs.Categorizer);
         BinaryData jsonSchemaBinaryData = await GetJsonSchemaAsync().ConfigureAwait(false);
 
         return new ChatCompletionOptions
@@ -94,7 +94,7 @@ public class Categorizer(
 
     private async Task<BinaryData> GetJsonSchemaAsync()
     {
-        string schemaPath = Path.Combine(AppContext.BaseDirectory, _llmSettings.Outputs.Path, _llmSettings.Outputs.Categorizer);
+        string schemaPath = Path.Combine(AppContext.BaseDirectory, _llmSettings.StructuredOutputs.Path, _llmSettings.StructuredOutputs.Categorizer);
         string fileName = Path.GetFileNameWithoutExtension(schemaPath);
 
         await using FileStream stream = File.OpenRead(schemaPath);

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Options;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -9,10 +10,15 @@ namespace TransactionProcessingSystem.Configuration;
 public record AppSettings
 {
     public required LlmSettings LlmSettings { get; init; }
+
     public required MicrosoftGraphSettings MicrosoftGraph { get; init; }
+
     public required ExportSettings Export { get; init; }
+
     public required PipelineSettings Pipeline { get; init; }
+
     public required Neo4jSettings Neo4j { get; init; }
+
     public required TransactionFetcherSettings TransactionFetcher { get; init; }
 }
 
@@ -22,7 +28,7 @@ public record LlmSettings
     public required OpenAI OpenAI { get; init; }
 
     [Required]
-    public required StructuredOutputs Outputs { get; init; }
+    public required StructuredOutputs StructuredOutputs { get; init; }
 
     [Required]
     public required Prompts Prompts { get; init; }

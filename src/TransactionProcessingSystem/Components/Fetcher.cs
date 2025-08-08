@@ -25,7 +25,8 @@ public class Fetcher
     {
         var allTransactions = new List<RawTransaction>();
         var badRecords = new List<string>();
-        var files = Directory.GetFiles(_settings.InputDirectory, "*.csv");
+        var inputDirectory = Path.Combine(AppContext.BaseDirectory, _settings.InputDirectory);
+        var files = Directory.GetFiles(inputDirectory, "*.csv");
 
         var config = CsvConfiguration.FromAttributes<RawTransaction>();
         config.BadDataFound = context => badRecords.Add(context.RawRecord);

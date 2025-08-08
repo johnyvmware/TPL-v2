@@ -33,7 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddChatClient();
 
         services.AddScoped<Fetcher>();
-        services.AddScoped<TitleFormatter>();
+        services.AddScoped<Categorizer>();
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
         //services.AddScoped<EmailEnricher>();
@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
         // Register OpenAI client
         services.AddSingleton(serviceProvider =>
         {
-            var openAISettings = serviceProvider.GetRequiredService<IOptions<OpenAISettings>>().Value;
+            var openAISettings = serviceProvider.GetRequiredService<IOptions<OpenAI>>().Value;
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
             return new ChatClient(openAISettings.Model, openAISecrets.ApiKey);
@@ -114,8 +114,8 @@ public static class ServiceCollectionExtensions
             .Bind(configuration);
 
         services
-            .AddOptionsWithValidateOnStart<OpenAISettings>()
-            .Bind(configuration.GetSection("OpenAI"))
+            .AddOptionsWithValidateOnStart<LlmSettings>()
+            .Bind(configuration.GetSection(nameof(LlmSettings)))
             .ValidateDataAnnotations();
 
         services

@@ -1,0 +1,81 @@
+Given a bank transaction with the fields: description, title, and optionally receiver, classify the transaction into a main category and a corresponding subcategory from the lists below. Carefully analyze the description, title, and receiver (if provided) to determine the most appropriate categorization. Only select subcategories that belong to your chosen main category.
+
+Begin with a concise checklist (3-7 bullets) of what you will do; keep items conceptual, not implementation-level.
+
+Always provide explicit, step-by-step reasoning before presenting the final categories. 
+
+# Main Categories and Subcategories
+- Home
+    - Credit
+    - Internet/TV/Phone
+    - Electricity/Water/Waste
+    - Furnishings
+    - Consumables
+    - Other
+- Daily
+    - Groceries
+    - Other
+- Transport
+    - Fuel
+    - Repairs
+    - Public
+    - Other
+- Personal
+    - Electronics / Software
+    - Clothes
+    - Hairdresser / Cosmetician
+    - Other
+- Health
+    - Doctor / Dentist
+    - Medicines
+    - Other
+- Education
+    - Books
+    - Training / Courses
+    - Other
+- Entertainment
+    - Recreation
+    - Food and Drink
+    - Other
+- Charity
+    - Charity
+- Vacation
+    - Vacation
+-Other expenses
+    - Other
+    - Bonds
+
+# Steps to Follow
+1. Carefully review the transaction's description, title, and receiver (if available).
+2. Identify keywords and contextual clues to suggest a main category.
+3. Narrow your choice to an appropriate subcategory within that main category.
+4. Clearly narrate your step-by-step reasoning process.
+5. Present your final main_category and subcategory selections in valid JSON, as in the examples.
+
+After the reasoning and categorization, validate that the selected subcategory properly belongs to the chosen main category. If the mapping is invalid, self-correct before providing output.
+
+# Output Format
+Output only valid JSON:
+{
+  "reasoning": "step-by-step explanation of your thought process",
+  "main_category": "[MAIN CATEGORY in English]",
+  "subcategory": "[SUBCATEGORY in English]"
+}
+
+# Examples
+## Example 1
+Input:  
+description: "Biedronka Zakupy spożywcze", title: "Biedronka"
+
+Output:
+{
+  "reasoning": "The description mentions 'spożywcze' (groceries) and 'Biedronka' is a grocery store. This fits the DAILY main category and the Groceries subcategory.",
+  "main_category": "DAILY",
+  "subcategory": "Groceries"
+}
+
+---
+
+Important: 
+- Always provide detailed, step-by-step reasoning before concluding.
+- Output only JSON containing your reasoning, main_category, and subcategory, all in English.

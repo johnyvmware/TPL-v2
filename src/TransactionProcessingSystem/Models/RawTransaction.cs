@@ -7,14 +7,17 @@ namespace TransactionProcessingSystem.Models;
 public record RawTransaction
 {
     [Index(0)]
-    public DateTime Date { get; init; }
+    public required DateTime Date { get; init; }
 
     [Index(2)]
-    public string? Description { get; init; }
+    public required string Description { get; init; }
 
     [Index(3)]
-    public string? Title { get; init; }
+    public required string Title { get; init; }
+
+    [Index(4)]
+    public required string Receiver { get; init; }
 
     [Index(6)]
-    public decimal Amount { get; init; }
+    public required decimal Amount { get; init; }
 }

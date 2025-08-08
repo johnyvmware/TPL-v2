@@ -8,7 +8,7 @@ namespace TransactionProcessingSystem.Configuration;
 /// </summary>
 public record AppSettings
 {
-    public required OpenAISettings OpenAI { get; init; }
+    public required LlmSettings LlmSettings { get; init; }
     public required MicrosoftGraphSettings MicrosoftGraph { get; init; }
     public required ExportSettings Export { get; init; }
     public required PipelineSettings Pipeline { get; init; }
@@ -16,10 +16,19 @@ public record AppSettings
     public required TransactionFetcherSettings TransactionFetcher { get; init; }
 }
 
-/// <summary>
-/// OpenAI configuration.
-/// </summary>
-public record OpenAISettings
+public record LlmSettings
+{
+    [Required]
+    public required OpenAI OpenAI { get; init; }
+
+    [Required]
+    public required StructuredOutputs Outputs { get; init; }
+
+    [Required]
+    public required Prompts Prompts { get; init; }
+}
+
+public record OpenAI
 {
     [Required]
     public required string Model { get; init; }
@@ -31,6 +40,24 @@ public record OpenAISettings
     [Required]
     [Range(0, 2)]
     public required float Temperature { get; init; }
+}
+
+public record Prompts
+{
+    [Required]
+    public required string Path { get; init; }
+
+    [Required]
+    public required string CategorizerDeveloperMessage { get; init; }
+}
+
+public record StructuredOutputs
+{
+    [Required]
+    public required string Path { get; init; }
+
+    [Required]
+    public required string Categorizer { get; init; }
 }
 
 /// <summary>

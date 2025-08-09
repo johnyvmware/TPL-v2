@@ -1,8 +1,5 @@
 {
-  "name": "expense_categorization",
-  "strict": true,
-  "schema": {
-    "type": "object",
+	"type": "object",
     "properties": {
       "Reasoning": {
         "type": "string",
@@ -58,5 +55,4 @@
       "SubCategory"
     ],
     "additionalProperties": false
-  }
 }

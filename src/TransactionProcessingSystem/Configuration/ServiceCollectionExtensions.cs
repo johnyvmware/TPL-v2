@@ -6,6 +6,7 @@ using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Components;
 using System.Text;
 using OpenAI.Chat;
+using OpenAI.Responses;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -51,6 +52,14 @@ public static class ServiceCollectionExtensions
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
             return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
+        });
+
+        services.AddSingleton(serviceProvider =>
+        {
+            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmSettings>>().Value;
+            var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+
+            return new OpenAIResponseClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
         });
 
         return services;

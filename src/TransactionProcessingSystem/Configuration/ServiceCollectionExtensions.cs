@@ -6,6 +6,7 @@ using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Components;
 using System.Text;
 using OpenAI.Chat;
+using OpenAI.Responses;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -32,25 +33,24 @@ public static class ServiceCollectionExtensions
     {
         services.AddChatClient();
 
-        services.AddScoped<Fetcher>();
-        services.AddScoped<TitleFormatter>();
+        services.AddTransient<Fetcher>();
+        services.AddTransient<Categorizer>();
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
         //services.AddScoped<EmailEnricher>();
         //services.AddScoped<Neo4jExporter>();
-
+        services.AddHostedService<Worker>();
         return services;
     }
 
     private static IServiceCollection AddChatClient(this IServiceCollection services)
     {
-        // Register OpenAI client
         services.AddSingleton(serviceProvider =>
         {
-            var openAISettings = serviceProvider.GetRequiredService<IOptions<OpenAISettings>>().Value;
+            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
-            return new ChatClient(openAISettings.Model, openAISecrets.ApiKey);
+            return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
         });
 
         return services;
@@ -64,7 +64,7 @@ public static class ServiceCollectionExtensions
         // Register Neo4j Driver as singleton
         services.AddSingleton<IDriver>(serviceProvider =>
         {
-            var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
+            var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
 
             var authToken = AuthTokens.Basic(neo4jSecrets.User, neo4jSecrets.Password);
@@ -88,10 +88,6 @@ public static class ServiceCollectionExtensions
     private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)
     {
         services
-            .AddOptions<SecretsSettings>()
-            .Bind(configuration);
-
-        services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
             .Bind(configuration.GetSection("OpenAI"))
             .ValidateDataAnnotations();
@@ -109,38 +105,37 @@ public static class ServiceCollectionExtensions
 
     private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
     {
-        services
-            .AddOptions<AppSettings>()
-            .Bind(configuration);
+        // ValidateOnStart() registers the validation to run when the first service requiring IOptions<T>
+        // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the host build phase.
 
         services
-            .AddOptionsWithValidateOnStart<OpenAISettings>()
-            .Bind(configuration.GetSection("OpenAI"))
+            .AddOptionsWithValidateOnStart<LlmOptions>()
+            .Bind(configuration.GetRequiredSection(LlmOptions.SectionName))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<MicrosoftGraphSettings>()
+            .AddOptionsWithValidateOnStart<MicrosoftGraphOptions>()
             .Bind(configuration.GetSection("MicrosoftGraph"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<ExportSettings>()
+            .AddOptionsWithValidateOnStart<ExportOptions>()
             .Bind(configuration.GetSection("Export"))
             .ValidateDataAnnotations();
 
         services
-            .AddSingleton<IValidateOptions<PipelineSettings>, MaxDegreeOfParallelismValidator>()
-            .AddOptionsWithValidateOnStart<PipelineSettings>()
+            .AddSingleton<IValidateOptions<PipelineOptions>, MaxDegreeOfParallelismValidator>()
+            .AddOptionsWithValidateOnStart<PipelineOptions>()
             .Bind(configuration.GetSection("Pipeline"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<Neo4jSettings>()
+            .AddOptionsWithValidateOnStart<Neo4jOptions>()
             .Bind(configuration.GetSection("Neo4j"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<TransactionFetcherSettings>()
+            .AddOptionsWithValidateOnStart<FetcherOptions>()
             .Bind(configuration.GetSection("TransactionFetcher"))
             .ValidateDataAnnotations();
     }

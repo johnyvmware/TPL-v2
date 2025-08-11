@@ -1,25 +1,23 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Options;
 
 namespace TransactionProcessingSystem.Configuration;
 
-/// <summary>
-/// Application settings containing non-secret configuration values.
-/// Secrets are handled separately via User Secrets (dev) and Environment Variables (prod).
-/// </summary>
-public record AppSettings
+public record LlmOptions
 {
-    public required OpenAISettings OpenAI { get; init; }
-    public required MicrosoftGraphSettings MicrosoftGraph { get; init; }
-    public required ExportSettings Export { get; init; }
-    public required PipelineSettings Pipeline { get; init; }
-    public required Neo4jSettings Neo4j { get; init; }
-    public required TransactionFetcherSettings TransactionFetcher { get; init; }
+    public const string SectionName = "Llm";
+
+    [Required, ValidateObjectMembers]
+    public required OpenAIOptions OpenAI { get; init; }
+
+    [Required, ValidateObjectMembers]
+    public required StructuredOutputsOptions StructuredOutputs { get; init; }
+
+    [Required, ValidateObjectMembers]
+    public required PromptsOptions Prompts { get; init; }
 }
 
-/// <summary>
-/// OpenAI configuration.
-/// </summary>
-public record OpenAISettings
+public record OpenAIOptions
 {
     [Required]
     public required string Model { get; init; }
@@ -33,10 +31,28 @@ public record OpenAISettings
     public required float Temperature { get; init; }
 }
 
+public record PromptsOptions
+{
+    [Required]
+    public required string Path { get; init; }
+
+    [Required]
+    public required string CategorizerDeveloperMessage { get; init; }
+}
+
+public record StructuredOutputsOptions
+{
+    [Required]
+    public required string Path { get; init; }
+
+    [Required]
+    public required string Categorizer { get; init; }
+}
+
 /// <summary>
 /// Microsoft Graph configuration.
 /// </summary>
-public record MicrosoftGraphSettings
+public record MicrosoftGraphOptions
 {
     [Required]
     [Range(1, 365)]
@@ -46,7 +62,7 @@ public record MicrosoftGraphSettings
 /// <summary>
 /// Export configuration settings.
 /// </summary>
-public record ExportSettings
+public record ExportOptions
 {
     [Required]
     [RegularExpression(@"^[^<>:""/\\|?*\r\n]+([\\/][^<>:""/\\|?*\r\n]+)*$", ErrorMessage = "OutputDirectory must be a valid path (absolute or relative).")]
@@ -64,7 +80,7 @@ public record ExportSettings
 /// <summary>
 /// Pipeline performance settings.
 /// </summary>
-public record PipelineSettings
+public record PipelineOptions
 {
     /// <summary>
     /// The maximum number of items allowed in the pipeline's input buffer at any time.
@@ -86,7 +102,7 @@ public record PipelineSettings
 /// <summary>
 /// Configuration settings for Neo4j database connection and behavior.
 /// </summary>
-public record Neo4jSettings
+public record Neo4jOptions
 {
     /// <summary>
     /// Target database name.
@@ -117,7 +133,7 @@ public record Neo4jSettings
     public int MaxTransactionRetryTimeSeconds { get; init; }
 }
 
-public record TransactionFetcherSettings
+public record FetcherOptions
 {
     [Required]
     public required string InputDirectory { get; init; }

@@ -3,17 +3,6 @@ using System.ComponentModel.DataAnnotations;
 namespace TransactionProcessingSystem.Configuration;
 
 /// <summary>
-/// Secret configuration values bound from User Secrets (development) or Environment Variables (production).
-/// These values should never be stored in appsettings.json files.
-/// </summary>
-public record SecretsSettings
-{
-    public required OpenAISecrets OpenAI { get; init; }
-    public required MicrosoftGraphSecrets MicrosoftGraph { get; init; }
-    public required Neo4jSecrets Neo4j { get; init; }
-}
-
-/// <summary>
 /// OpenAI secret configuration
 /// </summary>
 public record OpenAISecrets

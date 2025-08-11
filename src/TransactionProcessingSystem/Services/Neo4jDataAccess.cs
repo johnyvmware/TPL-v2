@@ -14,10 +14,10 @@ namespace TransactionProcessingSystem.Services;
 /// </summary>
 public sealed class Neo4jDataAccess(
     IDriver driver,
-    IOptions<Neo4jSettings> settings,
+    IOptions<Neo4jOptions> settings,
     ILogger<Neo4jDataAccess> logger) : INeo4jDataAccess, IAsyncDisposable
 {
-    private readonly Neo4jSettings _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
+    private readonly Neo4jOptions _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
     private bool _disposed;
 
     public async ValueTask<bool> VerifyConnectivityAsync(CancellationToken cancellationToken = default)

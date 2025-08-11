@@ -11,9 +11,9 @@ namespace TransactionProcessingSystem.Components;
 
 public class Categorizer(
     ChatClient chatClient,
-    IOptions<LlmSettings> llmSettings)
+    IOptions<LlmOptions> llmSettings)
 {
-    private readonly LlmSettings llmSettings = llmSettings.Value;
+    private readonly LlmOptions llmSettings = llmSettings.Value;
 
     public async Task<Transaction?> CategorizeTransactionAsync(RawTransaction transaction)
     {

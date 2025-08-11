@@ -9,11 +9,11 @@ namespace TransactionProcessingSystem.Components;
 
 public class Fetcher
 {
-    private readonly TransactionFetcherSettings _settings;
+    private readonly FetcherOptions _settings;
     private readonly ILogger<Fetcher> _logger;
 
     public Fetcher(
-        IOptions<TransactionFetcherSettings> settings,
+        IOptions<FetcherOptions> settings,
         ILogger<Fetcher> logger)
     {
         _settings = settings.Value;

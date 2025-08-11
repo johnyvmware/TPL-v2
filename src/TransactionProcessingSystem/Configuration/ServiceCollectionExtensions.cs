@@ -33,33 +33,24 @@ public static class ServiceCollectionExtensions
     {
         services.AddChatClient();
 
-        services.AddScoped<Fetcher>();
-        services.AddScoped<Categorizer>();
+        services.AddTransient<Fetcher>();
+        services.AddTransient<Categorizer>();
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
         //services.AddScoped<EmailEnricher>();
         //services.AddScoped<Neo4jExporter>();
-
+        services.AddHostedService<Worker>();
         return services;
     }
 
     private static IServiceCollection AddChatClient(this IServiceCollection services)
     {
-        // Register OpenAI client
         services.AddSingleton(serviceProvider =>
         {
-            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmSettings>>().Value;
+            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
             return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
-        });
-
-        services.AddSingleton(serviceProvider =>
-        {
-            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmSettings>>().Value;
-            var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
-
-            return new OpenAIResponseClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
         });
 
         return services;
@@ -73,7 +64,7 @@ public static class ServiceCollectionExtensions
         // Register Neo4j Driver as singleton
         services.AddSingleton<IDriver>(serviceProvider =>
         {
-            var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
+            var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
 
             var authToken = AuthTokens.Basic(neo4jSecrets.User, neo4jSecrets.Password);
@@ -97,10 +88,6 @@ public static class ServiceCollectionExtensions
     private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)
     {
         services
-            .AddOptions<SecretsSettings>()
-            .Bind(configuration);
-
-        services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
             .Bind(configuration.GetSection("OpenAI"))
             .ValidateDataAnnotations();
@@ -118,38 +105,40 @@ public static class ServiceCollectionExtensions
 
     private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
     {
-        services
-            .AddOptions<AppSettings>()
-            .Bind(configuration);
+/*         services
+            .AddOptionsWithValidateOnStart<LlmOptions>()
+            .Bind(configuration.GetSection(nameof(LlmOptions)))
+            .ValidateDataAnnotations(); */
 
         services
-            .AddOptionsWithValidateOnStart<LlmSettings>()
-            .Bind(configuration.GetSection(nameof(LlmSettings)))
-            .ValidateDataAnnotations();
+            .AddOptions<LlmOptions>()
+            .Bind(configuration.GetSection(LlmOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services
-            .AddOptionsWithValidateOnStart<MicrosoftGraphSettings>()
+            .AddOptionsWithValidateOnStart<MicrosoftGraphOptions>()
             .Bind(configuration.GetSection("MicrosoftGraph"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<ExportSettings>()
+            .AddOptionsWithValidateOnStart<ExportOptions>()
             .Bind(configuration.GetSection("Export"))
             .ValidateDataAnnotations();
 
         services
-            .AddSingleton<IValidateOptions<PipelineSettings>, MaxDegreeOfParallelismValidator>()
-            .AddOptionsWithValidateOnStart<PipelineSettings>()
+            .AddSingleton<IValidateOptions<PipelineOptions>, MaxDegreeOfParallelismValidator>()
+            .AddOptionsWithValidateOnStart<PipelineOptions>()
             .Bind(configuration.GetSection("Pipeline"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<Neo4jSettings>()
+            .AddOptionsWithValidateOnStart<Neo4jOptions>()
             .Bind(configuration.GetSection("Neo4j"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<TransactionFetcherSettings>()
+            .AddOptionsWithValidateOnStart<FetcherOptions>()
             .Bind(configuration.GetSection("TransactionFetcher"))
             .ValidateDataAnnotations();
     }

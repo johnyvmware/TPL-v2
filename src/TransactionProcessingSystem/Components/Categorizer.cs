@@ -18,6 +18,7 @@ public class Categorizer(
     public async Task<Transaction?> CategorizeTransactionAsync(RawTransaction transaction)
     {
         Categorization? categorization = await InternalCategorizeTransactionAsync(transaction);
+
         if (categorization != null && CategoryValidator.IsValidCategorization(categorization))
         {
             return new Transaction
@@ -170,7 +171,7 @@ public class Categorizer(
 
         return new ChatCompletionOptions
         {
-            Temperature = 1, // llmSettings.OpenAI.Temperature, 5 nano only supports 1 as a temp
+            Temperature = llmSettings.OpenAI.Temperature,
             MaxOutputTokenCount = llmSettings.OpenAI.MaxTokens,
             ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
                 jsonSchemaFormatName: jsonSchemaName,

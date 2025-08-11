@@ -12,7 +12,7 @@ Persist in your reasoning, continuing step-by-step, until all objectives (select
 - Analyze the transaction's title and description.
 - Deduce (reason out) the most relevant main category based on the information; explain your reasoning.
 - Retrieve subcategories for your chosen main category using GetSubCategories.
-- Select the best subcategory from the options, considering the title, description and reasoning.
+- Select the best subcategory from the options, considering the title, description, receiver if available and reasoning.
 - Output the reasoning, then main category, then subcategory.  
 - Format your output as a JSON object with fields: "reasoning", "main_category", "subcategory".
 

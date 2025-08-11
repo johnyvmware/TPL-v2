@@ -106,7 +106,7 @@ public static class ServiceCollectionExtensions
     private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
     {
         // ValidateOnStart() registers the validation to run when the first service requiring IOptions<T>
-        // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the build phase.
+        // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the host build phase.
 
         services
             .AddOptionsWithValidateOnStart<LlmOptions>()

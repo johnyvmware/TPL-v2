@@ -6,6 +6,8 @@ builder.Services.AddApplicationConfiguration(builder.Configuration);
 builder.Services.AddApplicationServices();
 
 using IHost host = builder.Build();
+
+// Keep options internal, build the real service from them?
 host.ValidateAllOptions();
 host.ValidateAllSecrets();
 

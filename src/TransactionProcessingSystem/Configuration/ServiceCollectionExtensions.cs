@@ -105,16 +105,13 @@ public static class ServiceCollectionExtensions
 
     private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
     {
-/*         services
-            .AddOptionsWithValidateOnStart<LlmOptions>()
-            .Bind(configuration.GetSection(nameof(LlmOptions)))
-            .ValidateDataAnnotations(); */
+        // ValidateOnStart() registers the validation to run when the first service requiring IOptions<T>
+        // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the build phase.
 
         services
-            .AddOptions<LlmOptions>()
-            .Bind(configuration.GetSection(LlmOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
+            .AddOptionsWithValidateOnStart<LlmOptions>()
+            .Bind(configuration.GetRequiredSection(LlmOptions.SectionName))
+            .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<MicrosoftGraphOptions>()

@@ -7,13 +7,13 @@ public record LlmOptions
 {
     public const string SectionName = "Llm";
 
-    [Required]
+    [Required, ValidateObjectMembers]
     public required OpenAIOptions OpenAI { get; init; }
 
-    [Required]
+    [Required, ValidateObjectMembers]
     public required StructuredOutputsOptions StructuredOutputs { get; init; }
 
-    [Required]
+    [Required, ValidateObjectMembers]
     public required PromptsOptions Prompts { get; init; }
 }
 

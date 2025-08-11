@@ -6,5 +6,7 @@ builder.Services.AddApplicationConfiguration(builder.Configuration);
 builder.Services.AddApplicationServices();
 
 using IHost host = builder.Build();
+host.ValidateAllOptions();
+host.ValidateAllSecrets();
 
 await host.RunAsync();

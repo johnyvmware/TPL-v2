@@ -1,8 +1,6 @@
 namespace TransactionProcessingSystem.Models.Categories;
 
-public enum OtherCategory
+public enum Charity
 {
-    None,
-    Bonds,
-    Other
+    Charity
 }

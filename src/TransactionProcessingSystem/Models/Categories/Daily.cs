@@ -1,8 +1,7 @@
 namespace TransactionProcessingSystem.Models.Categories;
 
-public enum DailyCategory
+public enum Daily
 {
-    None,
     Groceries,
     Other
 }

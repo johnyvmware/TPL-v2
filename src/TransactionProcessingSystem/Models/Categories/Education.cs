@@ -1,8 +1,7 @@
 namespace TransactionProcessingSystem.Models.Categories;
 
-public enum EducationCategory
+public enum Education
 {
-    None,
     Books,
     Courses,
     Other

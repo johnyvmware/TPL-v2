@@ -1,8 +1,7 @@
 namespace TransactionProcessingSystem.Models.Categories;
 
-public enum HomeCategory
+public enum Home
 {
-    None,
     Media,
     Utilities,
     Furniture,

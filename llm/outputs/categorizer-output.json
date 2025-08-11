@@ -3,7 +3,7 @@
     "properties": {
       "Reasoning": {
         "type": "string",
-        "description": "Step-by-step explanation of your thought process used to select the expense category.",
+        "description": "Step-by-step explanation of your thought process used to select the main and subcategory.",
         "minLength": 1
       },
       "MainCategory": {

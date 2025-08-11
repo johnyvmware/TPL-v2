@@ -12,5 +12,6 @@ public record Transaction
 
     public required decimal Amount { get; init; }
 
-    public required ExpenseCategorization Categorization { get; init; }
+    public required Categorization Categorization { get; init; }
+
 }

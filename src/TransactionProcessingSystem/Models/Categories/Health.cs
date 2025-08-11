@@ -1,9 +1,8 @@
 namespace TransactionProcessingSystem.Models.Categories;
 
-public enum EntertainmentCategory
+public enum Health
 {
-    None,
-    Recreation,
-    Food,
+    Doctor,
+    Medicines,
     Other
 }

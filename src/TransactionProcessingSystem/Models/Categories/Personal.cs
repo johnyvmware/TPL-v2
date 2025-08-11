@@ -1,8 +1,7 @@
 namespace TransactionProcessingSystem.Models.Categories;
 
-public enum PersonalCategory
+public enum Personal
 {
-    None,
     Tools,
     Clothes,
     Beauty,

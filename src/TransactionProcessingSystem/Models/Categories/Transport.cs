@@ -1,8 +1,7 @@
 namespace TransactionProcessingSystem.Models.Categories;
 
-public enum TransportCategory
+public enum Transport
 {
-    None,
     Fuel,
     Repairs,
     Public,

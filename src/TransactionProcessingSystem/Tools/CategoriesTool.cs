@@ -1,110 +1,49 @@
+using OpenAI.Chat;
 using OpenAI.Responses;
+using TransactionProcessingSystem.Models.Categories;
 
 namespace TransactionProcessingSystem.Tools;
 
-public static class CategoriesTool
+public static class CategoryDefinitions
 {
-    private static readonly BinaryData _emptyFunctionParameters = BinaryData.FromString("{}");
-
-    public static IEnumerable<ResponseTool> Get()
+    public static readonly Dictionary<string, List<string>> Categories = new()
     {
-        return
-        [
-            GetHomeCategoriesTool(),
-            GetDailyCategoriesTool(),
-            GetEducationCategoriesTool(),
-            GetTransportCategoriesTool(),
-            GetEntertainmentCategoriesTool(),
-            GetHealthCategoriesTool(),
-            GetPersonalCategoriesTool(),
-            GetOtherCategoriesTool()
-        ];
-    }
+        [nameof(Home)] = [.. Enum.GetNames<Home>()],
+        [nameof(Daily)] = [.. Enum.GetNames<Daily>()],
+        [nameof(Education)] = [.. Enum.GetNames<Education>()],
+        [nameof(Transport)] = [.. Enum.GetNames<Transport>()],
+        [nameof(Entertainment)] = [.. Enum.GetNames<Entertainment>()],
+        [nameof(Health)] = [.. Enum.GetNames<Health>()],
+        [nameof(Personal)] = [.. Enum.GetNames<Personal>()],
+        [nameof(Other)] = [.. Enum.GetNames<Other>()],
+        [nameof(Vacations)] = [.. Enum.GetNames<Vacations>()],
+        [nameof(Charity)] = [.. Enum.GetNames<Charity>()]
+    };
 
-    // here when function schema is strict (true), the schema must be supplied with the additonal properties set to false
-    // so maybe better to 
-    public static ResponseTool GetHomeCategoriesTool()
+    public static string GetSubCategories(string mainCategory)
     {
-/*         var functionDefinition = new
+        if (Categories.TryGetValue(mainCategory, out List<string>? subCategories))
         {
-            name = "getcategories_home",
-            description = "Returns categories for the home page",
-            parameters = new
-            {
-                type = "object",
-                properties = new { },
-                required = Array.Empty<string>(),
-                additionalProperties = false
-            }
-        }; */
+            return string.Join(", ", subCategories);
+        }
 
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-home",
-            functionDescription: "Returns a list of all subcategories under the \"Home\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
+        throw new ArgumentException($"Main category '{mainCategory}' does not exist.");
     }
 
-    public static ResponseTool GetDailyCategoriesTool()
-    {
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-daily",
-            functionDescription: "Returns a list of all subcategories under the \"Daily\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
-    }
-
-    public static ResponseTool GetEducationCategoriesTool()
-    {
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-education",
-            functionDescription: "Returns a list of all subcategories under the \"Education\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
-    }
-
-    public static ResponseTool GetTransportCategoriesTool()
-    {
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-transport",
-            functionDescription: "Returns a list of all subcategories under the \"Transport\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
-    }
-
-    public static ResponseTool GetEntertainmentCategoriesTool()
-    {
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-entertainment",
-            functionDescription: "Returns a list of all subcategories under the \"Entertainment\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
-    }
-
-    public static ResponseTool GetHealthCategoriesTool()
-    {
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-health",
-            functionDescription: "Returns a list of all subcategories under the \"Health\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
-    }
-
-    public static ResponseTool GetPersonalCategoriesTool()
-    {
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-personal",
-            functionDescription: "Returns a list of all subcategories under the \"Personal\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
-    }
-
-    public static ResponseTool GetOtherCategoriesTool()
-    {
-        return ResponseTool.CreateFunctionTool(
-            functionName: "getcategories-other",
-            functionDescription: "Returns a list of all subcategories under the \"Other\" category",
-            functionParameters: _emptyFunctionParameters,
-            functionSchemaIsStrict: false);
-    }
+    public static readonly ChatTool GetSubCategoriesTool = ChatTool.CreateFunctionTool(
+        functionName: nameof(GetSubCategories),
+        functionDescription: "Get subcategories for a given main category",
+        functionParameters: BinaryData.FromBytes("""
+        {
+            "type": "object",
+            "properties": {
+                "mainCategory": {
+                    "type": "string",
+                    "description": "The main category for which to retrieve subcategories."
+                }
+            },
+            "required": [ "mainCategory" ]
+        }
+        """u8.ToArray())
+    );
 }

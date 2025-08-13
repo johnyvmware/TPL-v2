@@ -21,6 +21,8 @@ namespace TransactionProcessingSystem.Configuration;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    private const string _sourceName = "TransactionProcessingSystem";
+
     /// <summary>
     /// Adds and configures all application settings and secrets with validation.
     /// </summary>
@@ -28,6 +30,10 @@ public static class ServiceCollectionExtensions
     {
         ConfigureAppSettings(services, configuration);
         ConfigureAppSecrets(services, configuration);
+
+        services.AddTelemetry();
+         // MemoryDistributedCache wraps around MemoryCache, but this let us started with the concept of distributed caching, just evaluate
+        services.AddDistributedMemoryCache();
 
         // Register code pages for Windows-1250 encoding support
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -37,12 +43,9 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services
-            .AddIChatClient()
-            .AddChatClient();
-
+        services.AddIChatClient();
         services.AddTransient<Fetcher>();
-        services.AddTransient<Categorizer>();
+        //services.AddTransient<Categorizer>();
         services.AddTransient<CategorizerV2>();
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
@@ -65,33 +68,33 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddIChatClient(this IServiceCollection services)
     {
-        // Configure OpenTelemetry exporter.
-        const string sourceName = "TransactionProcessingSystem";
-        services
-            .AddOpenTelemetry()
-            .WithTracing(builder => builder.AddSource(sourceName).AddConsoleExporter());
-
-        // MemoryDistributedCache wraps around MemoryCache, but this let us started with the concept of distributed caching, just evaluate
-        services.AddDistributedMemoryCache();
-
         services.AddSingleton<IChatClient>(serviceProvider =>
-            {
-                var openAiSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value.OpenAI;
-                var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
-                var chatClient = new ChatClient(openAiSettings.Model, openAISecrets.ApiKey)
-                    .AsIChatClient()
-                    .AsBuilder()
-                    .UseLogging()
-                    .UseDistributedCache()
-                    .UseFunctionInvocation() // This would use logger resolved from container
-                                             // ILogging could be simpler alternative to OpenTelemetry, the console exporter extension writes to console
-                    .UseOpenTelemetry(sourceName: sourceName, configure: c => c.EnableSensitiveData = true)
-                    .Build();
+        {
+            OpenAIOptions openAiSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value.OpenAI;
+            OpenAISecrets openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+            IChatClient chatClient = new ChatClient(openAiSettings.Model, openAISecrets.ApiKey)
+                .AsIChatClient()
+                .AsBuilder()
+                .UseLogging()
+                // MemoryCache configured above
+                .UseDistributedCache()
+                // This would use logger resolved from container
+                .UseFunctionInvocation()
+                // ILogging could be simpler alternative to OpenTelemetry, the console exporter extension writes to console
+                .UseOpenTelemetry(sourceName: _sourceName, configure: c => c.EnableSensitiveData = true)
+                .Build(serviceProvider);
 
-                return chatClient;
-            });
+            return chatClient;
+        });
 
         return services;
+    }
+
+    private static void AddTelemetry(this IServiceCollection services)
+    {
+       services
+            .AddOpenTelemetry()
+            .WithTracing(builder => builder.AddSource(_sourceName).AddConsoleExporter());
     }
 
     /// <summary>

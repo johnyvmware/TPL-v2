@@ -6,12 +6,12 @@ public static class CategoryValidator
 {
     public static bool IsValidMainCategory(string mainCategory)
     {
-        return CategoryDefinitions.Categories.ContainsKey(mainCategory);
+        return CategoryRegistry.Categories.ContainsKey(mainCategory);
     }
 
     public static bool IsValidSubCategory(string mainCategory, string subCategory)
     {
-        if (CategoryDefinitions.Categories.TryGetValue(mainCategory, out List<string>? subCategories))
+        if (CategoryRegistry.Categories.TryGetValue(mainCategory, out List<string>? subCategories))
         {
             return subCategories.Contains(subCategory);
         }

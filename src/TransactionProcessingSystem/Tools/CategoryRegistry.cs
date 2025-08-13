@@ -4,7 +4,7 @@ using TransactionProcessingSystem.Models.Categories;
 
 namespace TransactionProcessingSystem.Tools;
 
-public static class CategoryDefinitions
+public static class CategoryRegistry
 {
     public static readonly Dictionary<string, List<string>> Categories = new()
     {
@@ -20,11 +20,16 @@ public static class CategoryDefinitions
         [nameof(Charity)] = [.. Enum.GetNames<Charity>()]
     };
 
-    public static string GetSubCategories(string mainCategory)
+    public static IReadOnlyCollection<string> GetMainCategories()
+    {
+        return Categories.Keys;
+    }
+
+    public static IReadOnlyCollection<string> GetSubCategories(string mainCategory)
     {
         if (Categories.TryGetValue(mainCategory, out List<string>? subCategories))
         {
-            return string.Join(", ", subCategories);
+            return subCategories.AsReadOnly();
         }
 
         throw new ArgumentException($"Main category '{mainCategory}' does not exist.");

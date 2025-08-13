@@ -68,7 +68,7 @@ public class Categorizer(
                         {
                             switch (toolCall.FunctionName)
                             {
-                                case nameof(CategoryDefinitions.GetSubCategories):
+                                case nameof(CategoryRegistry.GetSubCategories):
                                     {
                                         // The arguments that the model wants to use to call the function are specified as a
                                         // stringified JSON object based on the schema defined in the tool definition. Note that
@@ -82,8 +82,8 @@ public class Categorizer(
                                             throw new ArgumentNullException(nameof(mainCategory), "The main category argument is required.");
                                         }
 
-                                        var toolResult = CategoryDefinitions.GetSubCategories(mainCategory.ToString());
-                                        chatMessages.Add(new ToolChatMessage(toolCall.Id, toolResult));
+                                        var toolResult = CategoryRegistry.GetSubCategories(mainCategory.ToString());
+                                        chatMessages.Add(new ToolChatMessage(toolCall.Id, string.Join(", ", toolResult)));
                                         break;
                                     }
 
@@ -177,7 +177,7 @@ public class Categorizer(
                 jsonSchemaFormatName: jsonSchemaName,
                 jsonSchema: jsonSchemaBinaryData,
                 jsonSchemaIsStrict: true),
-            Tools = { CategoryDefinitions.GetSubCategoriesTool },
+            Tools = { CategoryRegistry.GetSubCategoriesTool },
         };
     }
 

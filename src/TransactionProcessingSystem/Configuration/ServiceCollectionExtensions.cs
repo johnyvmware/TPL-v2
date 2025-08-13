@@ -7,6 +7,12 @@ using TransactionProcessingSystem.Components;
 using System.Text;
 using OpenAI.Chat;
 using OpenAI.Responses;
+using OpenAI;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Logs;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -31,10 +37,13 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddChatClient();
+        services
+            .AddIChatClient()
+            .AddChatClient();
 
         services.AddTransient<Fetcher>();
         services.AddTransient<Categorizer>();
+        services.AddTransient<CategorizerV2>();
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
         //services.AddScoped<EmailEnricher>();
@@ -45,13 +54,42 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddChatClient(this IServiceCollection services)
     {
-        services.AddSingleton(serviceProvider =>
+        return services.AddSingleton(serviceProvider =>
         {
             var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
             return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
         });
+    }
+
+    private static IServiceCollection AddIChatClient(this IServiceCollection services)
+    {
+        // Configure OpenTelemetry exporter.
+        const string sourceName = "TransactionProcessingSystem";
+        services
+            .AddOpenTelemetry()
+            .WithTracing(builder => builder.AddSource(sourceName).AddConsoleExporter());
+
+        // MemoryDistributedCache wraps around MemoryCache, but this let us started with the concept of distributed caching, just evaluate
+        services.AddDistributedMemoryCache();
+
+        services.AddSingleton<IChatClient>(serviceProvider =>
+            {
+                var openAiSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value.OpenAI;
+                var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+                var chatClient = new ChatClient(openAiSettings.Model, openAISecrets.ApiKey)
+                    .AsIChatClient()
+                    .AsBuilder()
+                    .UseLogging()
+                    .UseDistributedCache()
+                    .UseFunctionInvocation() // This would use logger resolved from container
+                                             // ILogging could be simpler alternative to OpenTelemetry, the console exporter extension writes to console
+                    .UseOpenTelemetry(sourceName: sourceName, configure: c => c.EnableSensitiveData = true)
+                    .Build();
+
+                return chatClient;
+            });
 
         return services;
     }

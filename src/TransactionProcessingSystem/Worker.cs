@@ -9,15 +9,18 @@ internal sealed class Worker : BackgroundService
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly Fetcher _fetcher;
     private readonly Categorizer _categorizer;
+    private readonly CategorizerV2 _categorizerV2;
 
     public Worker(
         IHostApplicationLifetime hostApplicationLifetime,
         Fetcher fetcher,
-        Categorizer categorizer)
+        Categorizer categorizer,
+        CategorizerV2 categorizerV2)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _fetcher = fetcher;
         _categorizer = categorizer;
+        _categorizerV2 = categorizerV2;
 
         _hostApplicationLifetime.ApplicationStarted.Register(() =>
         {
@@ -32,6 +35,8 @@ internal sealed class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var test = _categorizerV2.CategorizeTransactionAsync();
+
         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
         List<Transaction> categorizedTransactions = [];
         foreach (var transaction in rawTransactions.Skip(2))

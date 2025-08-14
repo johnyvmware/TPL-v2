@@ -33,7 +33,7 @@ public static class ServiceCollectionExtensions
         ConfigureAppSecrets(services, configuration);
 
         services.AddTelemetry();
-         // MemoryDistributedCache wraps around MemoryCache, but this let us started with the concept of distributed caching, just evaluate
+         // MemoryDistributedCache wraps around MemoryCache, but this lets us get started with the concept of distributed caching; just evaluate
         services.AddDistributedMemoryCache();
 
         // Register code pages for Windows-1250 encoding support

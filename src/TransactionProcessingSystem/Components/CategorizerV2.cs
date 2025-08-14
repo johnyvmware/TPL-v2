@@ -2,38 +2,59 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
-using TransactionProcessingSystem.Tools;
+using TransactionProcessingSystem.Services;
 
 namespace TransactionProcessingSystem.Components;
 
 public class CategorizerV2(
     IChatClient chatClient,
+    ICategoriesService categoriesService,
+    AIFunctionService aIFunctionService,
     IOptions<LlmOptions> llmSettings)
 {
+
+    private readonly ChatOptions _chatOptions = new()
+    {
+        Tools = [
+            aIFunctionService.GetSubCategories(),
+            aIFunctionService.GetMainCategories()
+        ]
+    };
+
     public async Task CategorizeTransactionAsync(RawTransaction transaction)
     {
-        var chatOptions = new ChatOptions
-        {
-            Tools = [
-                AIFunctionFactory.Create((string mainCategory) => {
-                    return CategoryRegistry.GetSubCategories(mainCategory);
-                },
-                "get_sub_categories",
-                "Get sub categories for a given main category"),
-
-                AIFunctionFactory.Create(() => {
-                    return CategoryRegistry.GetMainCategories();
-                },
-                "get_main_categories",
-                "Get main categories")]
-        };
-
         ChatMessage systemMessage = await CreateSystemMessageAsync();
         ChatMessage userMessage = CreateUserMessage(transaction);
         List<ChatMessage> chatHistory = [systemMessage, userMessage];
 
-        ChatResponse<Categorization> response = await chatClient.GetResponseAsync<Categorization>(chatHistory, chatOptions);
-        Categorization categorization = response.Result; // Home and Daily categories seem to be really close to each other for the model space, and I get mixed results
+        Categorization? categorization = await TryCategorize(chatHistory, _chatOptions);
+    }
+
+    private async Task<Categorization?> TryCategorize(List<ChatMessage> chatHistory, ChatOptions chatOptions)
+    {
+        // Retry logic with validation
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            ChatResponse<Categorization> response = await chatClient.GetResponseAsync<Categorization>(chatHistory, chatOptions);
+            Categorization categorization = response.Result;
+
+            ValidationResult validationResult = categoriesService.ValidateCategorization(categorization);
+
+            if (validationResult.IsValid)
+            {
+                return categorization;
+            }
+
+            // Add validation error to chat history for retry
+            if (attempt < maxRetries - 1)
+            {
+                //chatHistory.Add(new ChatMessage(ChatRole.Assistant, $"Selected: {categorization.MainCategory} - {categorization.SubCategory}"));
+                chatHistory.Add(new ChatMessage(ChatRole.User, $"Error: {validationResult.ErrorMessage}. Please provide a valid categorization."));
+            }
+        }
+        
+        return null; // Return null if all retries fail
     }
 
     private async Task<ChatMessage> CreateSystemMessageAsync()

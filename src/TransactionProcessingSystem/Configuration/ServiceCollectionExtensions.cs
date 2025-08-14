@@ -13,6 +13,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Logs;
+using Microsoft.Extensions.Logging;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -52,6 +53,27 @@ public static class ServiceCollectionExtensions
         //services.AddScoped<EmailEnricher>();
         //services.AddScoped<Neo4jExporter>();
         services.AddHostedService<Worker>();
+
+        services.AddSingleton<ICategoriesProvider>(serviceProvider =>
+        {
+            ILogger<CategoriesProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoriesProvider>>();
+            string relativePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
+            string absolutePath = Path.Combine(AppContext.BaseDirectory, relativePath);
+
+            if (!File.Exists(absolutePath))
+            {
+                throw new FileNotFoundException($"Category configuration file not found at: {absolutePath}");
+            }
+
+            CategoriesProvider categoriesProvider = new(absolutePath, logger);
+            categoriesProvider.Load();
+
+            return categoriesProvider;
+        });
+
+        services.AddSingleton<ICategoriesService, CategoryService>();
+        services.AddSingleton<AIFunctionService>();
+
         return services;
     }
 
@@ -178,6 +200,11 @@ public static class ServiceCollectionExtensions
         services
             .AddOptionsWithValidateOnStart<FetcherOptions>()
             .Bind(configuration.GetSection("TransactionFetcher"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<CategoriesOptions>()
+            .Bind(configuration.GetSection(CategoriesOptions.SectionName))
             .ValidateDataAnnotations();
     }
 }

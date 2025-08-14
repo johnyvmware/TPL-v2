@@ -17,6 +17,14 @@ public record LlmOptions
     public required PromptsOptions Prompts { get; init; }
 }
 
+public record CategoriesOptions
+{
+    public const string SectionName = "Categories";
+
+    [Required]
+    public required string Path { get; init; }
+}
+
 public record OpenAIOptions
 {
     [Required]

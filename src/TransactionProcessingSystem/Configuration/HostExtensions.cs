@@ -28,6 +28,7 @@ public static class HostExtensions
         host.ValidateOptions<PipelineOptions>();
         host.ValidateOptions<Neo4jOptions>();
         host.ValidateOptions<FetcherOptions>();
+        host.ValidateOptions<CategoriesOptions>();
     }
 
     public static void ValidateAllSecrets(this IHost host)

@@ -1,0 +1,52 @@
+{
+  "categories": {
+    "Home": [
+      "Utilities",
+      "Media", 
+      "Furniture",
+      "Consumables",
+      "Other"
+    ],
+    "Daily": [
+      "Groceries",
+      "Other"
+    ],
+    "Entertainment": [
+      "Recreation",
+      "Food",
+      "Other"
+    ],
+    "Transportation": [
+      "Fuel",
+      "Public Transport",
+      "Car Maintenance",
+      "Other"
+    ],
+    "Healthcare": [
+      "Doctor",
+      "Pharmacy",
+      "Other"
+    ],
+    "Charity": [
+      "Charity"
+    ],
+    "Education": [
+      "Books",
+      "Courses",
+      "Other"
+    ],
+    "Personal": [
+      "Tools",
+      "Clothes",
+      "Beauty",
+      "Other"
+    ],
+    "Vacations": [
+      "Vacations"
+    ],
+    "Other": [
+      "Bonds",
+      "Other"
+    ]
+  }
+}

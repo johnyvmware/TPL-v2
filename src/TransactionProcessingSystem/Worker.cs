@@ -9,12 +9,12 @@ internal sealed class Worker : BackgroundService
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly Fetcher _fetcher;
     //private readonly Categorizer _categorizer;
-    private readonly CategorizerV2 _categorizerV2;
+    private readonly Categorizer _categorizerV2;
 
     public Worker(
         IHostApplicationLifetime hostApplicationLifetime,
         Fetcher fetcher,
-        CategorizerV2 categorizerV2)
+        Categorizer categorizerV2)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _fetcher = fetcher;
@@ -34,8 +34,8 @@ internal sealed class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
-        await _categorizerV2.CategorizeTransactionAsync(rawTransactions[10]);
+         List<RawTransaction> rawTransactions = _fetcher.Fetch();
+        await _categorizerV2.CategorizeAsync(rawTransactions[10]);
 
 /*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
         List<Transaction> categorizedTransactions = [];

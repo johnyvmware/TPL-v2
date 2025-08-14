@@ -1,17 +1,19 @@
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Caching.Distributed;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Services;
 
 namespace TransactionProcessingSystem.Components;
 
-public class CategorizerV2(
+public class Categorizer(
     IChatClient chatClient,
+    IDistributedCache distributedCache,
     ICategoriesService categoriesService,
     AIFunctionService aIFunctionService,
-    IOptions<LlmOptions> llmSettings)
+    LlmOptions settings)
 {
+    private const string CategorizerPromptCacheKey = "CategorizerPrompt";
 
     private readonly ChatOptions _chatOptions = new()
     {
@@ -21,16 +23,24 @@ public class CategorizerV2(
         ]
     };
 
-    public async Task CategorizeTransactionAsync(RawTransaction transaction)
+    public async Task<Categorization?> CategorizeAsync(RawTransaction transaction)
+    {
+        List<ChatMessage> chatMessages = await GetChatMessagesAsync(transaction);
+        Categorization? categorization = await InternalCategorizeAsync(chatMessages, _chatOptions);
+
+        return categorization;
+    }
+
+    private async Task<List<ChatMessage>> GetChatMessagesAsync(RawTransaction transaction)
     {
         ChatMessage systemMessage = await CreateSystemMessageAsync();
         ChatMessage userMessage = CreateUserMessage(transaction);
-        List<ChatMessage> chatHistory = [systemMessage, userMessage];
-
-        Categorization? categorization = await TryCategorize(chatHistory, _chatOptions);
+        List<ChatMessage> chatMessages = [systemMessage, userMessage];
+        
+        return chatMessages;
     }
 
-    private async Task<Categorization?> TryCategorize(List<ChatMessage> chatHistory, ChatOptions chatOptions)
+    private async Task<Categorization?> InternalCategorizeAsync(List<ChatMessage> chatHistory, ChatOptions chatOptions)
     {
         // Retry logic with validation
         int maxRetries = 3;
@@ -53,7 +63,7 @@ public class CategorizerV2(
                 chatHistory.Add(new ChatMessage(ChatRole.User, $"Error: {validationResult.ErrorMessage}. Please provide a valid categorization."));
             }
         }
-        
+
         return null; // Return null if all retries fail
     }
 
@@ -67,8 +77,14 @@ public class CategorizerV2(
 
     private async Task<string> ReadCategorizerPromptAsync()
     {
-        string categorizerPromptPath = Path.Combine(AppContext.BaseDirectory, llmSettings.Value.Prompts.Path, llmSettings.Value.Prompts.CategorizerDeveloperMessage);
+        string? cachedPrompt = await distributedCache.GetStringAsync(CategorizerPromptCacheKey);
+        if (cachedPrompt is not null)
+            return cachedPrompt;
+
+        string categorizerPromptPath = Path.Combine(AppContext.BaseDirectory, settings.Prompts.Path, settings.Prompts.CategorizerDeveloperMessage);
         string categorizerPrompt = await File.ReadAllTextAsync(categorizerPromptPath);
+
+        await distributedCache.SetStringAsync(CategorizerPromptCacheKey, categorizerPrompt);
 
         return categorizerPrompt;
     }

@@ -45,9 +45,21 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddIChatClient();
-        services.AddTransient<Fetcher>();
-        //services.AddTransient<Categorizer>();
-        services.AddTransient<CategorizerV2>();
+        services.AddTransient(serviceProvider =>
+        {
+            var logger = serviceProvider.GetRequiredService<ILogger<Fetcher>>();
+            var settings = serviceProvider.GetRequiredService<IOptions<FetcherOptions>>().Value;
+            return new Fetcher(settings, logger);
+        });
+        services.AddTransient(serviceProvider =>
+        {
+            var chatClient = serviceProvider.GetRequiredService<IChatClient>();
+            var categoriesService = serviceProvider.GetRequiredService<ICategoriesService>();
+            var aIFunctionService = serviceProvider.GetRequiredService<AIFunctionService>();
+            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
+
+            return new Categorizer(chatClient, categoriesService, aIFunctionService, llmSettings);
+        });
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
         //services.AddScoped<EmailEnricher>();

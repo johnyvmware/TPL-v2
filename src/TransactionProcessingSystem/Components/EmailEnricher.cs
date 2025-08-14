@@ -12,12 +12,12 @@ namespace TransactionProcessingSystem.Components;
 public class EmailEnricher : ProcessorBase<TransactionOld, TransactionOld>
 {
     private readonly GraphServiceClient _graphClient;
-    private readonly MicrosoftGraphSettings _settings;
+    private readonly MicrosoftGraphOptions _settings;
     private readonly MicrosoftGraphSecrets _secrets;
     private static readonly Regex AmountRegex = new(@"\$?(\d+(?:\.\d{2})?)", RegexOptions.Compiled);
 
     public EmailEnricher(
-        IOptions<MicrosoftGraphSettings> settings,
+        IOptions<MicrosoftGraphOptions> settings,
         IOptions<MicrosoftGraphSecrets> secrets,
         ILogger<EmailEnricher> logger,
         int boundedCapacity = 100)

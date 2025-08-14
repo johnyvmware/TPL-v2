@@ -67,5 +67,5 @@ appsettings.*.json
 !appsettings.Development.json
 !appsettings.Production.json
 
-# Data files
-data/
+# Transaction files
+data/transactions/*.csv

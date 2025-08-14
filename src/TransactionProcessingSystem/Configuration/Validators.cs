@@ -5,9 +5,9 @@ namespace TransactionProcessingSystem.Configuration;
 /// <summary>
 /// Validator for Max Degree Of Parallelism settings.
 /// </summary>
-public sealed class MaxDegreeOfParallelismValidator : IValidateOptions<PipelineSettings>
+public sealed class MaxDegreeOfParallelismValidator : IValidateOptions<PipelineOptions>
 {
-    public ValidateOptionsResult Validate(string? name, PipelineSettings options)
+    public ValidateOptionsResult Validate(string? name, PipelineOptions options)
     {
         if (options.MaxDegreeOfParallelism > Environment.ProcessorCount)
         {

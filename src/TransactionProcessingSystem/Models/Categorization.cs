@@ -1,4 +1,3 @@
-using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Models;
 

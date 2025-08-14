@@ -102,7 +102,7 @@ public static class ServiceCollectionExtensions
                 .UseDistributedCache()
                 // This would use logger resolved from container
                 .UseFunctionInvocation()
-                // ILogging could be simpler alternative to OpenTelemetry, the console exporter extension writes to console
+                // ILogging could be a simpler alternative to OpenTelemetry, the console exporter extension writes to console
                 .UseOpenTelemetry(sourceName: _sourceName, configure: c => c.EnableSensitiveData = true)
                 .Build(serviceProvider);
 

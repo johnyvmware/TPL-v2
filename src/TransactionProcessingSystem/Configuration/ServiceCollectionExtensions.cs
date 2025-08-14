@@ -6,6 +6,14 @@ using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Components;
 using System.Text;
 using OpenAI.Chat;
+using OpenAI.Responses;
+using OpenAI;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Logs;
+using Microsoft.Extensions.Logging;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -14,6 +22,8 @@ namespace TransactionProcessingSystem.Configuration;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    private const string _sourceName = "TransactionProcessingSystem";
+
     /// <summary>
     /// Adds and configures all application settings and secrets with validation.
     /// </summary>
@@ -21,6 +31,10 @@ public static class ServiceCollectionExtensions
     {
         ConfigureAppSettings(services, configuration);
         ConfigureAppSecrets(services, configuration);
+
+        services.AddTelemetry();
+         // MemoryDistributedCache wraps around MemoryCache, but this lets us get started with the concept of distributed caching; just evaluate
+        services.AddDistributedMemoryCache();
 
         // Register code pages for Windows-1250 encoding support
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -30,30 +44,79 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddChatClient();
-
-        services.AddScoped<Fetcher>();
-        services.AddScoped<TitleFormatter>();
+        services.AddIChatClient();
+        services.AddTransient<Fetcher>();
+        //services.AddTransient<Categorizer>();
+        services.AddTransient<CategorizerV2>();
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
         //services.AddScoped<EmailEnricher>();
         //services.AddScoped<Neo4jExporter>();
+        services.AddHostedService<Worker>();
+
+        services.AddSingleton<ICategoriesProvider>(serviceProvider =>
+        {
+            ILogger<CategoriesProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoriesProvider>>();
+            string relativePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
+            string absolutePath = Path.Combine(AppContext.BaseDirectory, relativePath);
+
+            if (!File.Exists(absolutePath))
+            {
+                throw new FileNotFoundException($"Category configuration file not found at: {absolutePath}");
+            }
+
+            CategoriesProvider categoriesProvider = new(absolutePath, logger);
+            categoriesProvider.Load();
+
+            return categoriesProvider;
+        });
+
+        services.AddSingleton<ICategoriesService, CategoryService>();
+        services.AddSingleton<AIFunctionService>();
 
         return services;
     }
 
     private static IServiceCollection AddChatClient(this IServiceCollection services)
     {
-        // Register OpenAI client
-        services.AddSingleton(serviceProvider =>
+        return services.AddSingleton(serviceProvider =>
         {
-            var openAISettings = serviceProvider.GetRequiredService<IOptions<OpenAISettings>>().Value;
+            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
-            return new ChatClient(openAISettings.Model, openAISecrets.ApiKey);
+            return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
+        });
+    }
+
+    private static IServiceCollection AddIChatClient(this IServiceCollection services)
+    {
+        services.AddSingleton<IChatClient>(serviceProvider =>
+        {
+            OpenAIOptions openAiSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value.OpenAI;
+            OpenAISecrets openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+            IChatClient chatClient = new ChatClient(openAiSettings.Model, openAISecrets.ApiKey)
+                .AsIChatClient()
+                .AsBuilder()
+                .UseLogging()
+                // MemoryCache configured above
+                .UseDistributedCache()
+                // This would use logger resolved from container
+                .UseFunctionInvocation()
+                // ILogging could be a simpler alternative to OpenTelemetry, the console exporter extension writes to console
+                .UseOpenTelemetry(sourceName: _sourceName, configure: c => c.EnableSensitiveData = true)
+                .Build(serviceProvider);
+
+            return chatClient;
         });
 
         return services;
+    }
+
+    private static void AddTelemetry(this IServiceCollection services)
+    {
+       services
+            .AddOpenTelemetry()
+            .WithTracing(builder => builder.AddSource(_sourceName).AddConsoleExporter());
     }
 
     /// <summary>
@@ -64,7 +127,7 @@ public static class ServiceCollectionExtensions
         // Register Neo4j Driver as singleton
         services.AddSingleton<IDriver>(serviceProvider =>
         {
-            var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jSettings>>().Value;
+            var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
             var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
 
             var authToken = AuthTokens.Basic(neo4jSecrets.User, neo4jSecrets.Password);
@@ -88,10 +151,6 @@ public static class ServiceCollectionExtensions
     private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)
     {
         services
-            .AddOptions<SecretsSettings>()
-            .Bind(configuration);
-
-        services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
             .Bind(configuration.GetSection("OpenAI"))
             .ValidateDataAnnotations();
@@ -109,39 +168,43 @@ public static class ServiceCollectionExtensions
 
     private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
     {
-        services
-            .AddOptions<AppSettings>()
-            .Bind(configuration);
+        // ValidateOnStart() registers the validation to run when the first service requiring IOptions<T>
+        // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the host build phase.
 
         services
-            .AddOptionsWithValidateOnStart<OpenAISettings>()
-            .Bind(configuration.GetSection("OpenAI"))
+            .AddOptionsWithValidateOnStart<LlmOptions>()
+            .Bind(configuration.GetRequiredSection(LlmOptions.SectionName))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<MicrosoftGraphSettings>()
+            .AddOptionsWithValidateOnStart<MicrosoftGraphOptions>()
             .Bind(configuration.GetSection("MicrosoftGraph"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<ExportSettings>()
+            .AddOptionsWithValidateOnStart<ExportOptions>()
             .Bind(configuration.GetSection("Export"))
             .ValidateDataAnnotations();
 
         services
-            .AddSingleton<IValidateOptions<PipelineSettings>, MaxDegreeOfParallelismValidator>()
-            .AddOptionsWithValidateOnStart<PipelineSettings>()
+            .AddSingleton<IValidateOptions<PipelineOptions>, MaxDegreeOfParallelismValidator>()
+            .AddOptionsWithValidateOnStart<PipelineOptions>()
             .Bind(configuration.GetSection("Pipeline"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<Neo4jSettings>()
+            .AddOptionsWithValidateOnStart<Neo4jOptions>()
             .Bind(configuration.GetSection("Neo4j"))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<TransactionFetcherSettings>()
+            .AddOptionsWithValidateOnStart<FetcherOptions>()
             .Bind(configuration.GetSection("TransactionFetcher"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<CategoriesOptions>()
+            .Bind(configuration.GetSection(CategoriesOptions.SectionName))
             .ValidateDataAnnotations();
     }
 }

@@ -1,3 +1,4 @@
+# work in progress ⚠️
 # Transaction Processing System
 
 > **A next-generation transaction processing platform** featuring a high-performance TPL Dataflow pipeline, intelligent categorization with OpenAI GPT-4, advanced analytics via Neo4j graph database, seamless Microsoft Graph integration, and robust automated testing with a full CI/CD pipeline.

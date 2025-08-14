@@ -54,14 +54,12 @@
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
 
+  <!-- Should copy dev and prod configurations? -->
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Tools\" />
-  </ItemGroup>
 
 </Project>

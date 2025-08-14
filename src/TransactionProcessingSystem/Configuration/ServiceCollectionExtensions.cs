@@ -7,6 +7,13 @@ using TransactionProcessingSystem.Components;
 using System.Text;
 using OpenAI.Chat;
 using OpenAI.Responses;
+using OpenAI;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Logs;
+using Microsoft.Extensions.Logging;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -15,6 +22,8 @@ namespace TransactionProcessingSystem.Configuration;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    private const string _sourceName = "TransactionProcessingSystem";
+
     /// <summary>
     /// Adds and configures all application settings and secrets with validation.
     /// </summary>
@@ -22,6 +31,10 @@ public static class ServiceCollectionExtensions
     {
         ConfigureAppSettings(services, configuration);
         ConfigureAppSecrets(services, configuration);
+
+        services.AddTelemetry();
+         // MemoryDistributedCache wraps around MemoryCache, but this lets us get started with the concept of distributed caching; just evaluate
+        services.AddDistributedMemoryCache();
 
         // Register code pages for Windows-1250 encoding support
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -31,29 +44,79 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddChatClient();
-
+        services.AddIChatClient();
         services.AddTransient<Fetcher>();
-        services.AddTransient<Categorizer>();
+        //services.AddTransient<Categorizer>();
+        services.AddTransient<CategorizerV2>();
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();
         //services.AddScoped<EmailEnricher>();
         //services.AddScoped<Neo4jExporter>();
         services.AddHostedService<Worker>();
+
+        services.AddSingleton<ICategoriesProvider>(serviceProvider =>
+        {
+            ILogger<CategoriesProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoriesProvider>>();
+            string relativePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
+            string absolutePath = Path.Combine(AppContext.BaseDirectory, relativePath);
+
+            if (!File.Exists(absolutePath))
+            {
+                throw new FileNotFoundException($"Category configuration file not found at: {absolutePath}");
+            }
+
+            CategoriesProvider categoriesProvider = new(absolutePath, logger);
+            categoriesProvider.Load();
+
+            return categoriesProvider;
+        });
+
+        services.AddSingleton<ICategoriesService, CategoryService>();
+        services.AddSingleton<AIFunctionService>();
+
         return services;
     }
 
     private static IServiceCollection AddChatClient(this IServiceCollection services)
     {
-        services.AddSingleton(serviceProvider =>
+        return services.AddSingleton(serviceProvider =>
         {
             var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
 
             return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
         });
+    }
+
+    private static IServiceCollection AddIChatClient(this IServiceCollection services)
+    {
+        services.AddSingleton<IChatClient>(serviceProvider =>
+        {
+            OpenAIOptions openAiSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value.OpenAI;
+            OpenAISecrets openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+            IChatClient chatClient = new ChatClient(openAiSettings.Model, openAISecrets.ApiKey)
+                .AsIChatClient()
+                .AsBuilder()
+                .UseLogging()
+                // MemoryCache configured above
+                .UseDistributedCache()
+                // This would use logger resolved from container
+                .UseFunctionInvocation()
+                // ILogging could be a simpler alternative to OpenTelemetry, the console exporter extension writes to console
+                .UseOpenTelemetry(sourceName: _sourceName, configure: c => c.EnableSensitiveData = true)
+                .Build(serviceProvider);
+
+            return chatClient;
+        });
 
         return services;
+    }
+
+    private static void AddTelemetry(this IServiceCollection services)
+    {
+       services
+            .AddOpenTelemetry()
+            .WithTracing(builder => builder.AddSource(_sourceName).AddConsoleExporter());
     }
 
     /// <summary>
@@ -137,6 +200,11 @@ public static class ServiceCollectionExtensions
         services
             .AddOptionsWithValidateOnStart<FetcherOptions>()
             .Bind(configuration.GetSection("TransactionFetcher"))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<CategoriesOptions>()
+            .Bind(configuration.GetSection(CategoriesOptions.SectionName))
             .ValidateDataAnnotations();
     }
 }

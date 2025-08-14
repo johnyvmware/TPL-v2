@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.AI;
 
 namespace TransactionProcessingSystem.Services;

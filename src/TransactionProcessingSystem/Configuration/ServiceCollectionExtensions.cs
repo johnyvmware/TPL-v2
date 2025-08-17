@@ -54,11 +54,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient(serviceProvider =>
         {
             var chatClient = serviceProvider.GetRequiredService<IChatClient>();
+            var distributedCache = serviceProvider.GetRequiredService<IDistributedCache>();
             var categoriesService = serviceProvider.GetRequiredService<ICategoriesService>();
             var aIFunctionService = serviceProvider.GetRequiredService<AIFunctionService>();
             var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
 
-            return new Categorizer(chatClient, categoriesService, aIFunctionService, llmSettings);
+            return new Categorizer(chatClient, distributedCache, categoriesService, aIFunctionService, llmSettings);
         });
         //services.AddScoped<TransactionParser>();
         //services.AddScoped<TransactionProcessor>();

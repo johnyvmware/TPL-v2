@@ -6,6 +6,9 @@ using TransactionProcessingSystem.Services;
 
 namespace TransactionProcessingSystem.Components;
 
+// extract from here chat options creator
+// extract from here system prompt
+// i can pack it in one service like CategorizerSettings? GetChatOptions and GetSystemPrompt
 public class Categorizer(
     IChatClient chatClient,
     IDistributedCache distributedCache,
@@ -36,7 +39,7 @@ public class Categorizer(
         ChatMessage systemMessage = await CreateSystemMessageAsync();
         ChatMessage userMessage = CreateUserMessage(transaction);
         List<ChatMessage> chatMessages = [systemMessage, userMessage];
-        
+
         return chatMessages;
     }
 
@@ -88,7 +91,7 @@ public class Categorizer(
 
         return categorizerPrompt;
     }
-    
+
     private static ChatMessage CreateUserMessage(RawTransaction transaction)
     {
         string userPrompt = CreateUserPrompt(transaction);

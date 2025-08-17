@@ -8,13 +8,13 @@ namespace TransactionProcessingSystem.Components;
 /// <summary>
 /// Neo4j exporter that stores transactions in a graph database and creates relationships
 /// </summary>
-public class Neo4jExporter : ProcessorBase<TransactionOld, TransactionOld>
+public class Exporter : ProcessorBase<TransactionOld, TransactionOld>
 {
     private readonly INeo4jDataAccess _neo4jDataAccess;
 
-    public Neo4jExporter(
+    public Exporter(
         INeo4jDataAccess neo4jDataAccess,
-        ILogger<Neo4jExporter> logger,
+        ILogger<Exporter> logger,
         int boundedCapacity = 100)
         : base(logger, boundedCapacity)
     {

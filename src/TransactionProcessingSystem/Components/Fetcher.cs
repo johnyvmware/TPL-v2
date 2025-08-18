@@ -11,27 +11,27 @@ public class Fetcher(
     ILogger<Fetcher> logger)
 {
     // This should work per file, the fetcher
-    public List<RawTransaction> Fetch()
+    public List<Transaction> Fetch()
     {
-        var allTransactions = new List<RawTransaction>();
+        var allTransactions = new List<Transaction>();
         var badRecords = new List<string>();
         var inputDirectory = Path.Combine(AppContext.BaseDirectory, settings.InputDirectory);
         var files = Directory.GetFiles(inputDirectory, "*.csv");
 
-        var config = CsvConfiguration.FromAttributes<RawTransaction>();
+        var config = CsvConfiguration.FromAttributes<Transaction>();
         config.BadDataFound = context => badRecords.Add(context.RawRecord);
 
         foreach (var file in files)
         {
             using var reader = new StreamReader(file, System.Text.Encoding.GetEncoding(settings.Encoding));
             using var csv = new CsvReader(reader, config);
-            var fileTransactions = new List<RawTransaction>();
+            var fileTransactions = new List<Transaction>();
 
             while (csv.Read())
             {
                 try
                 {
-                    var record = csv.GetRecord<RawTransaction>();
+                    var record = csv.GetRecord<Transaction>();
                     if (record != null)
                     {
                         fileTransactions.Add(record);

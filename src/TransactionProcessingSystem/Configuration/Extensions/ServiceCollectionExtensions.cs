@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Neo4j.Driver;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Components;
 using System.Text;
@@ -11,9 +10,10 @@ using Microsoft.Extensions.Caching.Distributed;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Logs;
 using Microsoft.Extensions.Logging;
-using TransactionProcessingSystem.Components.Neo4jExporter;
+using TransactionProcessingSystem.Configuration.Validators;
+using TransactionProcessingSystem.Services.Categorizer;
 
-namespace TransactionProcessingSystem.Configuration;
+namespace TransactionProcessingSystem.Configuration.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -92,9 +92,9 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddCategoriesProvider(this IServiceCollection services)
     {
-        return services.AddSingleton<ICategoriesProvider>(serviceProvider =>
+        return services.AddSingleton<ICategoryProvider>(serviceProvider =>
         {
-            ILogger<CategoriesProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoriesProvider>>();
+            ILogger<CategoryProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoryProvider>>();
             string categoriesFilePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
             string absoluteCategoriesFilePath = Path.Combine(AppContext.BaseDirectory, categoriesFilePath);
 
@@ -103,7 +103,7 @@ public static class ServiceCollectionExtensions
                 throw new FileNotFoundException($"Category configuration file not found at: {absoluteCategoriesFilePath}");
             }
 
-            CategoriesProvider categoriesProvider = new(absoluteCategoriesFilePath, logger);
+            CategoryProvider categoriesProvider = new(absoluteCategoriesFilePath, logger);
             categoriesProvider.Load(); // Maybe this could be move to the pipeline and performed in a async manner
 
             return categoriesProvider;

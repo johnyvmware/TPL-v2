@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Configuration;
 
-namespace TransactionProcessingSystem.Components.Neo4jExporter;
+namespace TransactionProcessingSystem.Components;
 
 public sealed class Exporter : IAsyncDisposable
 {

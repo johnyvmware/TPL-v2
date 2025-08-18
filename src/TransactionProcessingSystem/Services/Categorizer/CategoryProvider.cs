@@ -1,16 +1,16 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace TransactionProcessingSystem.Services;
+namespace TransactionProcessingSystem.Services.Categorizer;
 
-public interface ICategoriesProvider
+public interface ICategoryProvider
 {
     HashSet<string> MainCategories { get; }
     HashSet<string> SubCategories { get; }
     IReadOnlyDictionary<string, HashSet<string>> ValidCombinations { get; }
 }
 
-public class CategoriesProvider(string categoriesFilePath, ILogger<CategoriesProvider> logger) : ICategoriesProvider
+public class CategoryProvider(string categoriesFilePath, ILogger<CategoryProvider> logger) : ICategoryProvider
 {
     private readonly Dictionary<string, HashSet<string>> _validCombinations = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _mainCategories = new(StringComparer.OrdinalIgnoreCase);

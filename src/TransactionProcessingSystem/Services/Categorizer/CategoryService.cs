@@ -1,20 +1,31 @@
-using System.ComponentModel;
 using TransactionProcessingSystem.Models;
 
-namespace TransactionProcessingSystem.Services;
+namespace TransactionProcessingSystem.Services.Categorizer;
 
 public interface ICategoriesService
 {
     bool IsValidCombination(string mainCategory, string subCategory);
-    ValidationResult ValidateCategorization(Categorization categorization); // maybe use data annotation?
+    CategoryAssignmentResult ValidateCategorization(CategoryAssignment categorization);
     IEnumerable<string> GetSubCategories(string mainCategory);
     IEnumerable<string> GetMainCategories();
     bool IsValidMainCategory(string mainCategory);
     bool IsValidSubCategory(string subCategory);
 }
 
-public class CategoryService(ICategoriesProvider categoriesProvider) : ICategoriesService
+public class CategoryService(ICategoryProvider categoriesProvider) : ICategoriesService
 {
+    public IEnumerable<string> GetSubCategories(string mainCategory)
+    {
+        return categoriesProvider.ValidCombinations.TryGetValue(mainCategory, out var subCategories)
+            ? subCategories
+            : Enumerable.Empty<string>();
+    }
+
+    public IEnumerable<string> GetMainCategories()
+    {
+        return categoriesProvider.ValidCombinations.Keys;
+    }
+
     public bool IsValidCombination(string mainCategory, string subCategory)
     {
         return categoriesProvider.ValidCombinations.TryGetValue(mainCategory, out var validSubCategories) && validSubCategories.Contains(subCategory);
@@ -30,28 +41,28 @@ public class CategoryService(ICategoriesProvider categoriesProvider) : ICategori
         return categoriesProvider.SubCategories.Contains(subCategory);
     }
 
-    public ValidationResult ValidateCategorization(Categorization categorization)
+    public CategoryAssignmentResult ValidateCategorization(CategoryAssignment categorization)
     {
         if (string.IsNullOrWhiteSpace(categorization.MainCategory))
         {
-            return ValidationResult.Failure("Main category cannot be empty");
+            return CategoryAssignmentResult.Failure("Main category cannot be empty");
         }
 
         if (string.IsNullOrWhiteSpace(categorization.SubCategory))
         {
-            return ValidationResult.Failure("Sub category cannot be empty");
+            return CategoryAssignmentResult.Failure("Sub category cannot be empty");
         }
 
         if (!IsValidMainCategory(categorization.MainCategory))
         {
-            return ValidationResult.Failure(
+            return CategoryAssignmentResult.Failure(
                 $"Unknown main category: '{categorization.MainCategory}'. " +
                 $"Valid main categories: {string.Join(", ", GetMainCategories())}");
         }
 
         if (!IsValidSubCategory(categorization.SubCategory))
         {
-            return ValidationResult.Failure(
+            return CategoryAssignmentResult.Failure(
                 $"Unknown sub category: '{categorization.SubCategory}'. " +
                 $"All valid sub categories: {string.Join(", ", categoriesProvider.SubCategories)}");
         }
@@ -59,15 +70,15 @@ public class CategoryService(ICategoriesProvider categoriesProvider) : ICategori
         if (!IsValidCombination(categorization.MainCategory, categorization.SubCategory))
         {
             var validSubCategories = GetSubCategories(categorization.MainCategory);
-            return ValidationResult.Failure(
+            return CategoryAssignmentResult.Failure(
                 $"Invalid combination: '{categorization.MainCategory}' cannot have subcategory '{categorization.SubCategory}'. " +
                 $"Valid subcategories for '{categorization.MainCategory}': {string.Join(", ", validSubCategories)}");
         }
 
-        return ValidationResult.Success();
+        return CategoryAssignmentResult.Success();
     }
 
-    [Description("Get valid sub categories for a given main category")]
+/*     [Description("Get valid sub categories for a given main category")]
     public IEnumerable<string> GetSubCategories(
         [Description("The main category name to get subcategories for")]
         string mainCategory)
@@ -81,5 +92,5 @@ public class CategoryService(ICategoriesProvider categoriesProvider) : ICategori
     public IEnumerable<string> GetMainCategories()
     {
         return categoriesProvider.ValidCombinations.Keys;
-    }
+    } */
 }

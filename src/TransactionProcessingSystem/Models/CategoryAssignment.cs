@@ -1,7 +1,7 @@
 
 namespace TransactionProcessingSystem.Models;
 
-public record Categorization
+public record CategoryAssignment
 {
     public required string Reasoning { get; init; }
     public required string MainCategory { get; init; }

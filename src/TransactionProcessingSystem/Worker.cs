@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using TransactionProcessingSystem.Components;
-using TransactionProcessingSystem.Components.Neo4jExporter;
 using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem;
@@ -40,8 +39,8 @@ internal sealed class Worker : BackgroundService
         await _exporter.VerifyConnectionAsync();
         //await _exporter.CreateGraphAsync();
         await _exporter.QueryGraphAsync();
-        List<RawTransaction> rawTransactions = _fetcher.Fetch();
-        Categorization? categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
+        List<Transaction> rawTransactions = _fetcher.Fetch();
+        CategoryAssignment? categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
         
         if (categorization != null)
         {

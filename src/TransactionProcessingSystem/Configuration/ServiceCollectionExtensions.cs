@@ -15,24 +15,14 @@ using TransactionProcessingSystem.Components.Neo4jExporter;
 
 namespace TransactionProcessingSystem.Configuration;
 
-/// <summary>
-/// Extension methods for configuring services following SRP and modern C# practices
-/// </summary>
 public static class ServiceCollectionExtensions
 {
-    private const string _sourceName = "TransactionProcessingSystem";
+    private const string _telemetrySourceName = "TransactionProcessingSystem";
 
-    /// <summary>
-    /// Adds and configures all application settings and secrets with validation.
-    /// </summary>
     public static IServiceCollection AddApplicationConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
         ConfigureAppSettings(services, configuration);
         ConfigureAppSecrets(services, configuration);
-
-        services.AddTelemetry();
-         // MemoryDistributedCache wraps around MemoryCache, but this lets us get started with the concept of distributed caching; just evaluate
-        services.AddDistributedMemoryCache();
 
         // Register code pages for Windows-1250 encoding support
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -42,14 +32,87 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddIChatClient();
-        services.AddTransient(serviceProvider =>
+        services.AddTelemetry();
+        services.AddDistributedMemoryCache(); // MemoryDistributedCache wraps around MemoryCache, but this lets us get started with the concept of distributed caching;
+        services.AddFetcher();
+        services.AddCategorizer();
+        services.AddExporter();
+        services.AddHostedService<Worker>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddTelemetry(this IServiceCollection services)
+    {
+        services
+             .AddOpenTelemetry()
+             .WithTracing(builder => builder.AddSource(_telemetrySourceName).AddConsoleExporter());
+
+        return services;
+    }
+
+    private static IServiceCollection AddFetcher(this IServiceCollection services)
+    {
+        return services.AddSingleton(serviceProvider =>
         {
             var logger = serviceProvider.GetRequiredService<ILogger<Fetcher>>();
             var settings = serviceProvider.GetRequiredService<IOptions<FetcherOptions>>().Value;
             return new Fetcher(settings, logger);
         });
-        services.AddTransient(serviceProvider =>
+    }
+
+    private static void AddCategorizer(this IServiceCollection services)
+    {
+        services.AddChatClient();
+        services.AddCategoriesProvider();
+        services.AddCategorizerImplementation();
+
+        services.AddSingleton<AIFunctionService>();
+        services.AddSingleton<ICategoriesService, CategoryService>();
+    }
+
+    private static IServiceCollection AddChatClient(this IServiceCollection services)
+    {
+        return services.AddSingleton(serviceProvider =>
+        {
+            OpenAIOptions openAiSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value.OpenAI;
+            OpenAISecrets openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+            IChatClient chatClient = new ChatClient(openAiSettings.Model, openAISecrets.ApiKey)
+                .AsIChatClient()
+                .AsBuilder()
+                .UseLogging()
+                .UseDistributedCache() // MemoryCache configured in the AddApplicationServices method
+                .UseFunctionInvocation()
+                .UseOpenTelemetry(sourceName: _telemetrySourceName, configure: c => c.EnableSensitiveData = true)
+                .Build(serviceProvider);
+
+            return chatClient;
+        });
+    }
+
+    private static IServiceCollection AddCategoriesProvider(this IServiceCollection services)
+    {
+        return services.AddSingleton<ICategoriesProvider>(serviceProvider =>
+        {
+            ILogger<CategoriesProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoriesProvider>>();
+            string categoriesFilePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
+            string absoluteCategoriesFilePath = Path.Combine(AppContext.BaseDirectory, categoriesFilePath);
+
+            if (!File.Exists(absoluteCategoriesFilePath))
+            {
+                throw new FileNotFoundException($"Category configuration file not found at: {absoluteCategoriesFilePath}");
+            }
+
+            CategoriesProvider categoriesProvider = new(absoluteCategoriesFilePath, logger);
+            categoriesProvider.Load(); // Maybe this could be move to the pipeline and performed in a async manner
+
+            return categoriesProvider;
+        });
+    }
+
+    private static IServiceCollection AddCategorizerImplementation(this IServiceCollection services)
+    {
+        return services.AddSingleton(serviceProvider =>
         {
             var chatClient = serviceProvider.GetRequiredService<IChatClient>();
             var distributedCache = serviceProvider.GetRequiredService<IDistributedCache>();
@@ -59,111 +122,18 @@ public static class ServiceCollectionExtensions
 
             return new Categorizer(chatClient, distributedCache, categoriesService, aIFunctionService, llmSettings);
         });
-        //services.AddScoped<TransactionParser>();
-        //services.AddScoped<TransactionProcessor>();
-        //services.AddScoped<EmailEnricher>();
-        //services.AddScoped<Neo4jExporter>();
-        services.AddHostedService<Worker>();
-        services.AddSingleton(serviceProvider =>
-        {
-            var logger = serviceProvider.GetRequiredService<ILogger<ExporterV2>>();
-            var secrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
-            var settings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
-            return new ExporterV2(settings, secrets, logger);
-        });
-
-        services.AddSingleton<ICategoriesProvider>(serviceProvider =>
-        {
-            ILogger<CategoriesProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoriesProvider>>();
-            string relativePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
-            string absolutePath = Path.Combine(AppContext.BaseDirectory, relativePath);
-
-            if (!File.Exists(absolutePath))
-            {
-                throw new FileNotFoundException($"Category configuration file not found at: {absolutePath}");
-            }
-
-            CategoriesProvider categoriesProvider = new(absolutePath, logger);
-            categoriesProvider.Load();
-
-            return categoriesProvider;
-        });
-
-        services.AddSingleton<ICategoriesService, CategoryService>();
-        services.AddSingleton<AIFunctionService>();
-
-        return services;
     }
 
-    private static IServiceCollection AddChatClient(this IServiceCollection services)
+    private static IServiceCollection AddExporter(this IServiceCollection services)
     {
         return services.AddSingleton(serviceProvider =>
         {
-            var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
-            var openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
+            var logger = serviceProvider.GetRequiredService<ILogger<Exporter>>();
+            var secrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
+            var settings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
 
-            return new ChatClient(llmSettings.OpenAI.Model, openAISecrets.ApiKey);
+            return new Exporter(settings, secrets, logger);
         });
-    }
-
-    private static IServiceCollection AddIChatClient(this IServiceCollection services)
-    {
-        services.AddSingleton<IChatClient>(serviceProvider =>
-        {
-            OpenAIOptions openAiSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value.OpenAI;
-            OpenAISecrets openAISecrets = serviceProvider.GetRequiredService<IOptions<OpenAISecrets>>().Value;
-            IChatClient chatClient = new ChatClient(openAiSettings.Model, openAISecrets.ApiKey)
-                .AsIChatClient()
-                .AsBuilder()
-                .UseLogging()
-                // MemoryCache configured above
-                .UseDistributedCache()
-                // This would use logger resolved from container
-                .UseFunctionInvocation()
-                // ILogging could be a simpler alternative to OpenTelemetry, the console exporter extension writes to console
-                .UseOpenTelemetry(sourceName: _sourceName, configure: c => c.EnableSensitiveData = true)
-                .Build(serviceProvider);
-
-            return chatClient;
-        });
-
-        return services;
-    }
-
-    private static void AddTelemetry(this IServiceCollection services)
-    {
-       services
-            .AddOpenTelemetry()
-            .WithTracing(builder => builder.AddSource(_sourceName).AddConsoleExporter());
-    }
-
-    /// <summary>
-    /// Adds Neo4j services including driver, data access, and background service.
-    /// </summary>
-    public static IServiceCollection AddNeo4jServices(this IServiceCollection services, IConfiguration configuration)
-    {
-        // Register Neo4j Driver as singleton
-        services.AddSingleton<IDriver>(serviceProvider =>
-        {
-            var neo4jSettings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
-            var neo4jSecrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
-
-            var authToken = AuthTokens.Basic(neo4jSecrets.User, neo4jSecrets.Password);
-
-            var driver = GraphDatabase.Driver(neo4jSecrets.Uri, authToken, config =>
-            {
-                config.WithMaxConnectionPoolSize(neo4jSettings.MaxConnectionPoolSize)
-                      .WithConnectionTimeout(TimeSpan.FromSeconds(neo4jSettings.ConnectionTimeoutSeconds))
-                      .WithMaxTransactionRetryTime(TimeSpan.FromSeconds(neo4jSettings.MaxTransactionRetryTimeSeconds));
-            });
-
-            return driver;
-        });
-
-        // Register Neo4j data access services
-        services.AddScoped<INeo4jDataAccess, Neo4jDataAccess>();
-
-        return services;
     }
 
     private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)

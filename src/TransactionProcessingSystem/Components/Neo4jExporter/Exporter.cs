@@ -4,20 +4,28 @@ using TransactionProcessingSystem.Configuration;
 
 namespace TransactionProcessingSystem.Components.Neo4jExporter;
 
-public sealed class ExporterV2 : IAsyncDisposable
+public sealed class Exporter : IAsyncDisposable
 {
     private readonly IDriver _driver;
     private readonly Neo4jOptions _settings;
     private readonly Neo4jSecrets _secrets;
-    private readonly ILogger<ExporterV2> _logger;
+    private readonly ILogger<Exporter> _logger;
 
-    public ExporterV2(Neo4jOptions settings, Neo4jSecrets secrets, ILogger<ExporterV2> logger)
+    public Exporter(Neo4jOptions settings, Neo4jSecrets secrets, ILogger<Exporter> logger)
     {
         _settings = settings;
         _secrets = secrets;
         _logger = logger;
 
-        _driver = GraphDatabase.Driver(_secrets.Uri, AuthTokens.Basic(_secrets.User, _secrets.Password));
+        _driver = GraphDatabase.Driver(
+            uri: _secrets.Uri,
+            authToken: AuthTokens.Basic(_secrets.User, _secrets.Password),
+            action: config =>
+            {
+                config.WithMaxConnectionPoolSize(_settings.MaxConnectionPoolSize)
+                      .WithConnectionTimeout(TimeSpan.FromSeconds(_settings.ConnectionTimeoutSeconds))
+                      .WithMaxTransactionRetryTime(TimeSpan.FromSeconds(_settings.MaxTransactionRetryTimeSeconds));
+            });
     }
 
     public Task VerifyConnectionAsync()

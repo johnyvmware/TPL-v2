@@ -10,13 +10,13 @@ internal sealed class Worker : BackgroundService
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly Fetcher _fetcher;
     private readonly Categorizer _categorizer;
-    private readonly ExporterV2 _exporter;
+    private readonly Exporter _exporter;
 
     public Worker(
         IHostApplicationLifetime hostApplicationLifetime,
         Fetcher fetcher,
         Categorizer categorizer,
-        ExporterV2 exporter)
+        Exporter exporter)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _fetcher = fetcher;

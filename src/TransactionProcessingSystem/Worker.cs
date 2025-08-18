@@ -33,10 +33,13 @@ internal sealed class Worker : BackgroundService
             Console.WriteLine("Transaction Processing System stopped.");
         });
     }
+    
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _exporter.InitializeDriverAsync();
+        await _exporter.VerifyConnectionAsync();
+        //await _exporter.CreateGraphAsync();
+        await _exporter.QueryGraphAsync();
         List<RawTransaction> rawTransactions = _fetcher.Fetch();
         Categorization? categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
         

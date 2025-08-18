@@ -14,6 +14,7 @@ using Microsoft.Extensions.Caching.Memory;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Logs;
 using Microsoft.Extensions.Logging;
+using TransactionProcessingSystem.Components.Neo4jExporter;
 
 namespace TransactionProcessingSystem.Configuration;
 
@@ -66,6 +67,13 @@ public static class ServiceCollectionExtensions
         //services.AddScoped<EmailEnricher>();
         //services.AddScoped<Neo4jExporter>();
         services.AddHostedService<Worker>();
+        services.AddSingleton(serviceProvider =>
+        {
+            var logger = serviceProvider.GetRequiredService<ILogger<ExporterV2>>();
+            var secrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
+            var settings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
+            return new ExporterV2(settings, secrets, logger);
+        });
 
         services.AddSingleton<ICategoriesProvider>(serviceProvider =>
         {

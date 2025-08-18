@@ -1,5 +1,3 @@
-using System;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Configuration;
@@ -8,7 +6,7 @@ namespace TransactionProcessingSystem.Components.Neo4jExporter;
 
 public sealed class ExporterV2 : IAsyncDisposable
 {
-    private IDriver? _driver;
+    private readonly IDriver _driver;
     private readonly Neo4jOptions _settings;
     private readonly Neo4jSecrets _secrets;
     private readonly ILogger<ExporterV2> _logger;
@@ -18,62 +16,50 @@ public sealed class ExporterV2 : IAsyncDisposable
         _settings = settings;
         _secrets = secrets;
         _logger = logger;
+
+        _driver = GraphDatabase.Driver(_secrets.Uri, AuthTokens.Basic(_secrets.User, _secrets.Password));
     }
 
-    public async Task InitializeDriverAsync()
+    public Task VerifyConnectionAsync()
     {
-         _driver = GraphDatabase.Driver( _secrets.Uri, AuthTokens.Basic(_secrets.User, _secrets.Password));
-        await _driver.VerifyConnectivityAsync();
+        return _driver.VerifyConnectivityAsync();
+    }
+
+    public async Task CreateGraphAsync()
+    {
+        var result = await _driver.ExecutableQuery(@"
+                CREATE (a:Person {name: $name})
+                CREATE (b:Person {name: $friendName})
+                CREATE (a)-[:KNOWS]->(b)
+                ")
+                .WithParameters(new { name = "Alice", friendName = "David" })
+                .WithConfig(new QueryConfig(database: _settings.Database))
+                .ExecuteAsync();
+
+        var summary = result.Summary;
+    }
+
+    public async Task QueryGraphAsync()
+    {
+        var result = await _driver.ExecutableQuery(@"
+            MATCH (p:Person)-[:KNOWS]->(:Person)
+            RETURN p.name AS name
+            ")
+            .WithConfig(new QueryConfig(database: _settings.Database))
+            .ExecuteAsync();
+
+        // Loop through results and print people's name
+        foreach (var record in result.Result) {
+            Console.WriteLine(record.Get<string>("name"));
+        }
+
+        // Summary information
+        var summary = result.Summary;
+        Console.WriteLine($"The query `{summary.Query.Text}` returned {result.Result.Count()} results in {summary.ResultAvailableAfter.Milliseconds} ms.");
     }
 
     public ValueTask DisposeAsync()
     {
-        return _driver?.DisposeAsync() ?? ValueTask.CompletedTask;
-    }
-}
-
-public class Neo4jLogger : Neo4j.Driver.ILogger {
-
-    private bool debug = false;
-    private bool trace = false;
-
-    public void Log(string level, string message) {
-        DateTime localDate = DateTime.Now;
-        Console.WriteLine($"{localDate.TimeOfDay} {level} {message}");
-    }
-
-    public void Error(Exception cause, string message, params object[] args) {
-        this.Log("ERROR", String.Format($"{message}", args));
-    }
-    public void Warn(Exception cause, string message, params object[] args) {
-        this.Log("WARN", String.Format($"{message}", args));
-    }
-
-    public void Info(string message, params object[] args) {
-        this.Log("INFO", String.Format($"{message}", args));
-    }
-
-    public void Debug(string message, params object[] args) {
-        this.Log("DEBUG", String.Format($"{message}", args));
-    }
-
-    public void Trace(string message, params object[] args) {
-        this.Log("TRACE", String.Format($"{message}", args));
-    }
-
-    public void EnableDebug() {
-        this.debug = true;
-    }
-
-    public void EnableTrace() {
-        this.trace = true;
-    }
-
-    public bool IsTraceEnabled() {
-        return this.trace;
-    }
-
-    public bool IsDebugEnabled() {
-        return this.debug;
+        return _driver.DisposeAsync();
     }
 }

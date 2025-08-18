@@ -2,7 +2,7 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Services.Categorizer;
 
-public interface ICategoriesService
+public interface ICategoryService
 {
     bool IsValidCombination(string mainCategory, string subCategory);
     CategoryAssignmentResult ValidateCategorization(CategoryAssignment categorization);
@@ -12,7 +12,7 @@ public interface ICategoriesService
     bool IsValidSubCategory(string subCategory);
 }
 
-public class CategoryService(ICategoryProvider categoriesProvider) : ICategoriesService
+public class CategoryService(ICategoryProvider categoriesProvider) : ICategoryService
 {
     public IEnumerable<string> GetSubCategories(string mainCategory)
     {
@@ -77,20 +77,4 @@ public class CategoryService(ICategoryProvider categoriesProvider) : ICategories
 
         return CategoryAssignmentResult.Success();
     }
-
-/*     [Description("Get valid sub categories for a given main category")]
-    public IEnumerable<string> GetSubCategories(
-        [Description("The main category name to get subcategories for")]
-        string mainCategory)
-    {
-        return categoriesProvider.ValidCombinations.TryGetValue(mainCategory, out var subCategories)
-            ? subCategories
-            : Enumerable.Empty<string>();
-    }
-
-    [Description("Get all available main categories")]
-    public IEnumerable<string> GetMainCategories()
-    {
-        return categoriesProvider.ValidCombinations.Keys;
-    } */
 }

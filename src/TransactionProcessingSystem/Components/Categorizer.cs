@@ -7,13 +7,10 @@ using TransactionProcessingSystem.Services.Categorizer;
 
 namespace TransactionProcessingSystem.Components;
 
-// extract from here chat options creator
-// extract from here system prompt
-// i can pack it in one service like CategorizerSettings? GetChatOptions and GetSystemPrompt
 public class Categorizer(
     IChatClient chatClient,
     IDistributedCache distributedCache,
-    ICategoriesService categoriesService,
+    ICategoryService categoriesService,
     AIFunctionService aIFunctionService,
     LlmOptions settings)
 {

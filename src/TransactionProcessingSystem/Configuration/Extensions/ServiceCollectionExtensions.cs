@@ -68,7 +68,7 @@ public static class ServiceCollectionExtensions
         services.AddCategorizerImplementation();
 
         services.AddSingleton<AIFunctionService>();
-        services.AddSingleton<ICategoriesService, CategoryService>();
+        services.AddSingleton<ICategoryService, CategoryService>();
     }
 
     private static IServiceCollection AddChatClient(this IServiceCollection services)
@@ -116,7 +116,7 @@ public static class ServiceCollectionExtensions
         {
             var chatClient = serviceProvider.GetRequiredService<IChatClient>();
             var distributedCache = serviceProvider.GetRequiredService<IDistributedCache>();
-            var categoriesService = serviceProvider.GetRequiredService<ICategoriesService>();
+            var categoriesService = serviceProvider.GetRequiredService<ICategoryService>();
             var aIFunctionService = serviceProvider.GetRequiredService<AIFunctionService>();
             var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
 

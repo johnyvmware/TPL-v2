@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace TransactionProcessingSystem.Configuration;
+namespace TransactionProcessingSystem.Configuration.Validators;
 
 /// <summary>
 /// Validator for Max Degree Of Parallelism settings.

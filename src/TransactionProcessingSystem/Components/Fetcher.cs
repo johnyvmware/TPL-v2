@@ -1,69 +1,56 @@
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Components;
 
-public class Fetcher
+public class Fetcher(
+    FetcherOptions settings,
+    ILogger<Fetcher> logger)
 {
-    private readonly FetcherOptions _settings;
-    private readonly ILogger<Fetcher> _logger;
-
-    public Fetcher(
-        IOptions<FetcherOptions> settings,
-        ILogger<Fetcher> logger)
-    {
-        _settings = settings.Value;
-        _logger = logger;
-    }
-
     // This should work per file, the fetcher
-    public List<RawTransaction> FetchTransactions()
+    public List<Transaction> Fetch()
     {
-        var allTransactions = new List<RawTransaction>();
+        var allTransactions = new List<Transaction>();
         var badRecords = new List<string>();
-        var inputDirectory = Path.Combine(AppContext.BaseDirectory, _settings.InputDirectory);
+        var inputDirectory = Path.Combine(AppContext.BaseDirectory, settings.InputDirectory);
         var files = Directory.GetFiles(inputDirectory, "*.csv");
 
-        var config = CsvConfiguration.FromAttributes<RawTransaction>();
+        var config = CsvConfiguration.FromAttributes<Transaction>();
         config.BadDataFound = context => badRecords.Add(context.RawRecord);
 
         foreach (var file in files)
         {
-            using var reader = new StreamReader(file, System.Text.Encoding.GetEncoding(_settings.Encoding));
+            using var reader = new StreamReader(file, System.Text.Encoding.GetEncoding(settings.Encoding));
             using var csv = new CsvReader(reader, config);
-            var fileTransactions = new List<RawTransaction>();
+            var fileTransactions = new List<Transaction>();
 
             while (csv.Read())
             {
                 try
                 {
-                    var record = csv.GetRecord<RawTransaction>();
+                    var record = csv.GetRecord<Transaction>();
                     if (record != null)
                     {
                         fileTransactions.Add(record);
                     }
                     else
                     {
-                        _logger.LogDebug("Skipping null record (likely metadata) in {File}", file);
                         badRecords.Add(csv.Context?.Parser?.RawRecord ?? string.Empty);
                     }
                 }
-                catch (CsvHelperException csvEx)
+                catch (CsvHelperException)
                 {
-                    _logger.LogDebug("Failed to parse CSV record in {File}: {Error}", file, csvEx.Message);
                     badRecords.Add(csv.Context?.Parser?.RawRecord ?? string.Empty);
                 }
             }
 
             allTransactions.AddRange(fileTransactions);
-            _logger.LogDebug("Successfully processed {Count} transactions from {File}", fileTransactions.Count, file);
         }
 
-        _logger.LogDebug("Processing complete. Total transactions: {Total}, Bad records: {Bad}", allTransactions.Count, badRecords.Count);
+        logger.LogDebug("Processing complete. Total transactions: {Total}, Bad records: {Bad}", allTransactions.Count, badRecords.Count);
 
         return allTransactions;
     }

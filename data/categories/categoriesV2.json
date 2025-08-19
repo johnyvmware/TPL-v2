@@ -2,186 +2,156 @@
   "categories": [
     {
       "name": "Housing",
-	    "version": "1.0",
       "definition": "Primary residence costs and non-entertainment home services.",
       "subcategories": [
         {
           "name": "Mortgage",
-		      "version": "1.0",
           "definition": "Payments to mortgage lender."
         },
         {
           "name": "Utilities",
-		      "version": "1.0",
           "definition": "Electricity, water, sewage, trash."
         },
         {
           "name": "Media",
-		      "version": "1.0",
           "definition": "Home ISP, cable/satellite TV bundles, home phone."
         },
         {
           "name": "Furniture",
-		      "version": "1.0",
           "definition": "Furniture and fixtures for the home."
         },
         {
           "name": "Consumables",
-		      "version": "1.0",
           "definition": "Non-food consumables for home (cleaning, paper, detergents)."
         },
         {
           "name": "Other housing",
-	        "version": "1.0",
           "definition": "No confident match to any housing category."
         }
       ]
     },
     {
       "name": "Food",
-	    "version": "1.0",
       "definition": "Food and beverage for consumption, excluding groceries' non-food items.",
       "subcategories": [
         {
           "name": "Groceries",
-		      "version": "1.0",
           "definition": "Supermarkets and food-only groceries."
         },
         {
           "name": "Other food",
-	        "version": "1.0",
           "definition": "No confident match to any food category."
         }
       ]
     },
     {
       "name": "Transport",
-	    "version": "1.0",
       "definition": "Transportation and commuting, and private vehicle costs.",
       "subcategories": [
         {
           "name": "Fuel",
-		      "version": "1.0",
           "definition": "Vehicle fuels."
         },
         {
           "name": "Public Transit",
-		      "version": "1.0",
           "definition": "Buses, metro, train passes, trams, on-demand rides, taxis, parking facilities, meters."
         },
         {
           "name": "Vehicle Service",
-		      "version": "1.0",
           "definition": "Maintenance, repairs, parts, car wash."
         },
         {
           "name": "Other transport",
-	        "version": "1.0",
           "definition": "No confident match to any transport category."
         }
       ]
     },
     {
       "name": "Health",
-	    "version": "1.0",
       "definition": "Medical services and medicines.",
       "subcategories": [
         {
           "name": "Doctor Clinics",
-		      "version": "1.0",
           "definition": "General practitioners, specialists, clinics."
         },
         {
           "name": "Pharmacy Drugstore",
-		      "version": "1.0",
           "definition": "Prescription and OTC medicines."
         },
         {
           "name": "Other health",
-	        "version": "1.0",
           "definition": "No confident match to any health category."
         }
       ]
     },
     {
       "name": "Charity",
-	    "version": "1.0",
       "definition": "Donations to nonprofits, religious giving, fundraisers."
     },
     {
       "name": "Education",
-	    "version": "1.0",
       "definition": "Learning, education materials, and education fees.",
       "subcategories": [
         {
           "name": "Courses",
-		      "version": "1.0",
           "definition": "Tuition, course fees."
         },
         {
           "name": "Books",
-		      "version": "1.0",
           "definition": "Educational books, study materials and educational platforms."
         },
         {
           "name": "Other education",
-	        "version": "1.0",
           "definition": "No confident match to any education category."
         }
       ]
     },
     {
       "name": "Lifestyle",
-	    "version": "1.0",
       "definition": "Personal wear, beauty, and non-home hobbies gear.",
       "subcategories": [
         {
           "name": "Clothing",
-		      "version": "1.0",
           "definition": "Apparel, shoes, tailoring."
         },
         {
           "name": "Beauty",
-		      "version": "1.0",
           "definition": "Cosmetics, salons, barbers."
         },
         {
           "name": "Gear",
-		      "version": "1.0",
           "definition": "Tech, sports, and hobby items for personal lifestyle use."
         },
         {
           "name": "Other lifestyle",
-	        "version": "1.0",
           "definition": "No confident match to any lifestyle category."
         }
       ]
     },
     {
       "name": "Entertainment",
-	    "version": "1.0",
       "definition": "Spending on cultural and social activities like dining out, cultural events, and going out for fun.",
       "subcategories": [
         {
           "name": "Recreation",
-		      "version": "1.0",
 		      "definition": "Spending on cultural events, entertainment venues, and recreational outings."
 		    },
         {
-          "name": "Food & Dining",
-		      "version": "1.0",
+          "name": "Dining",
           "definition": "Payments for restaurant meals, takeout, and food delivery services."
+        },
+        {
+          "name": "Other entertainment",
+          "definition": "No confident match to any entertainment category."
         }
       ]
     },
     {
       "name": "Vacations",
-	    "version": "1.0",
       "definition": "Trips and holidays outside daily commuting."
     },
     {
       "name": "Investments",
-	    "version": "1.0",
       "definition": "Investments, interest, bonds and loans."
     }
   ]

@@ -1,0 +1,90 @@
+// show full graph
+MATCH (n)
+OPTIONAL MATCH (n)-[r]->(m)
+RETURN n, r, m
+
+// constraints
+CREATE CONSTRAINT category_name_unique IF NOT EXISTS
+FOR (c:Category) REQUIRE c.name IS UNIQUE;
+
+// require a definition on Category nodes
+CREATE CONSTRAINT IF NOT EXISTS ON (c:Category) ASSERT exists(c.definition);
+
+// Create main category nodes
+CREATE (Housing:Category {name: 'Housing', definition: 'Primary residence costs and non-entertainment home services.'})
+CREATE (Food:Category {name: 'Food', definition: 'Food and beverage for consumption, excluding groceries\' non-food items.'})
+CREATE (Transport:Category {name: 'Transport', definition: 'Transportation and commuting, and private vehicle costs.'})
+CREATE (Health:Category {name: 'Health', definition: 'Medical services and medicines.'})
+CREATE (Charity:Category {name: 'Charity', definition: 'Donations to nonprofits, religious giving, fundraisers.'})
+CREATE (Education:Category {name: 'Education', definition: 'Learning, education materials, and education fees.'})
+CREATE (Lifestyle:Category {name: 'Lifestyle', definition: 'Personal wear, beauty, and non-home hobbies gear.'})
+CREATE (Entertainment:Category {name: 'Entertainment', definition: 'Spending on cultural and social activities like dining out, cultural events, and going out for fun.'})
+CREATE (Vacations:Category {name: 'Vacations', definition: 'Trips and holidays outside daily commuting.'})
+CREATE (Investments:Category {name: 'Investments', definition: 'Investments, interest, bonds and loans.'});
+
+// Create sub categories
+CREATE (Mortgage:Category {name: 'Mortgage', definition: 'Payments to mortgage lender.'})
+CREATE (Utilities:Category {name: 'Utilities', definition: 'Electricity, water, sewage, trash.'})
+CREATE (Media:Category {name: 'Media', definition: 'Home ISP, cable/satellite TV bundles, home phone.'})
+CREATE (Furniture:Category {name: 'Furniture', definition: 'Furniture and fixtures for the home.'})
+CREATE (Consumables:Category {name: 'Consumables', definition: 'Non-food consumables for home (cleaning, paper, detergents).'})
+CREATE (OtherHousing:Category {name: 'Other housing', definition: 'No confident match to any housing category.'})
+
+CREATE (Groceries:Category {name: 'Groceries', definition: 'Supermarkets and food-only groceries.'})
+CREATE (OtherFood:Category {name: 'Other food', definition: 'No confident match to any food category.'})
+
+CREATE (Fuel:Category {name: 'Fuel', definition: 'Vehicle fuels.'})
+CREATE (PublicTransit:Category {name: 'Public Transit', definition: 'Buses, metro, train passes, trams, on-demand rides, taxis, parking facilities, meters.'})
+CREATE (VehicleService:Category {name: 'Vehicle Service', definition: 'Maintenance, repairs, parts, car wash.'})
+CREATE (OtherTransport:Category {name: 'Other transport', definition: 'No confident match to any transport category.'})
+
+CREATE (DoctorClinics:Category {name: 'Doctor Clinics', definition: 'General practitioners, specialists, clinics.'})
+CREATE (PharmacyDrugstore:Category {name: 'Pharmacy Drugstore', definition: 'Prescription and OTC medicines.'})
+CREATE (OtherHealth:Category {name: 'Other health', definition: 'No confident match to any health category.'})
+
+CREATE (Courses:Category {name: 'Courses', definition: 'Tuition, course fees.'})
+CREATE (Books:Category {name: 'Books', definition: 'Educational books, study materials and educational platforms.'})
+CREATE (OtherEducation:Category {name: 'Other education', definition: 'No confident match to any education category.'})
+
+CREATE (Clothing:Category {name: 'Clothing', definition: 'Apparel, shoes, tailoring.'})
+CREATE (Beauty:Category {name: 'Beauty', definition: 'Cosmetics, salons, barbers.'})
+CREATE (Gear:Category {name: 'Gear', definition: 'Tech, sports, and hobby items for personal lifestyle use.'})
+CREATE (OtherLifestyle:Category {name: 'Other lifestyle', definition: 'No confident match to any lifestyle category.'})
+
+CREATE (Recreation:Category {name: 'Recreation', definition: 'Spending on cultural events, entertainment venues, and recreational outings.'})
+CREATE (Dining:Category {name: 'Dining', definition: 'Payments for restaurant meals, takeout, and food delivery services.'})
+CREATE (OtherEntertainment:Category {name: 'Other entertainment', definition: 'No confident match to'})
+
+// Create relationships
+
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Mortgage'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Utilities'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Media'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Furniture'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Consumables'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Other housing'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Food'}), (child:Category {name: 'Groceries'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Food'}), (child:Category {name: 'Other food'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Fuel'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Public Transit'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Vehicle Service'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Other transport'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Health'}), (child:Category {name: 'Doctor Clinics'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Health'}), (child:Category {name: 'Pharmacy Drugstore'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Health'}), (child:Category {name: 'Other health'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Education'}), (child:Category {name: 'Courses'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Education'}), (child:Category {name: 'Books'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Education'}), (child:Category {name: 'Other education'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Clothing'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Beauty'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Gear'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Other lifestyle'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Recreation'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Dining'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Other entertainment'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);

@@ -22,5 +22,5 @@ public record Transaction
     public required decimal Amount { get; init; }
 
     [Ignore]
-    public CategoryAssignment? Categorization { get; init; }
+    public CategoryAssignment? CategoryAssignment { get; init; }
 }

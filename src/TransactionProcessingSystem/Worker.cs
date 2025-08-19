@@ -40,7 +40,8 @@ internal sealed class Worker : BackgroundService
         //await _exporter.CreateGraphAsync();
         await _exporter.QueryGraphAsync();
         List<Transaction> rawTransactions = _fetcher.Fetch();
-        CategoryAssignment? categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
+        Transaction categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
+        
         
         if (categorization != null)
         {

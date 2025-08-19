@@ -24,12 +24,12 @@ public class Categorizer(
         ]
     };
 
-    public async Task<CategoryAssignment?> CategorizeAsync(Transaction transaction)
+    public async Task<Transaction> CategorizeAsync(Transaction transaction)
     {
         List<ChatMessage> chatMessages = await GetChatMessagesAsync(transaction);
-        CategoryAssignment? categorization = await InternalCategorizeAsync(chatMessages, _chatOptions);
+        CategoryAssignment? categoryAssignment = await InternalCategorizeAsync(chatMessages, _chatOptions);
 
-        return categorization;
+        return transaction with { CategoryAssignment = categoryAssignment };
     }
 
     private async Task<List<ChatMessage>> GetChatMessagesAsync(Transaction transaction)
@@ -48,13 +48,13 @@ public class Categorizer(
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
             ChatResponse<CategoryAssignment> response = await chatClient.GetResponseAsync<CategoryAssignment>(chatHistory, chatOptions);
-            CategoryAssignment categorization = response.Result;
+            CategoryAssignment categoryAssignment = response.Result;
 
-            CategoryAssignmentResult validationResult = categoriesService.ValidateCategorization(categorization);
+            CategoryAssignmentResult validationResult = categoriesService.ValidateCategorization(categoryAssignment);
 
             if (validationResult.IsValid)
             {
-                return categorization;
+                return categoryAssignment;
             }
 
             // Add validation error to chat history for retry OR WORK WITH ID FROM AI EXTENSIONS!

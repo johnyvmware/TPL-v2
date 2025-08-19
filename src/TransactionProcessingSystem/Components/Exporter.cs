@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
 using TransactionProcessingSystem.Configuration;
+using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Components;
 
@@ -31,6 +32,18 @@ public sealed class Exporter : IAsyncDisposable
     public Task VerifyConnectionAsync()
     {
         return _driver.VerifyConnectivityAsync();
+    }
+
+    public async Task ExportAsync(Transaction transaction)
+    {
+        var result = await _driver.ExecutableQuery(@"
+            CREATE (a:Person {name: $name})
+            CREATE (b:Person {name: $friendName})
+            CREATE (a)-[:KNOWS]->(b)
+            ")
+            .WithParameters(new { name = "Alice", friendName = "David" })
+            .WithConfig(new QueryConfig(database: _settings.Database))
+            .ExecuteAsync();
     }
 
     public async Task CreateGraphAsync()

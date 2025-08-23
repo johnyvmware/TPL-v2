@@ -36,6 +36,7 @@ internal sealed class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _fetcher.Fetch();
         await _exporter.VerifyConnectionAsync();
         //await _exporter.CreateGraphAsync();
         await _exporter.QueryGraphAsync();

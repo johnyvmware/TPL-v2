@@ -34,9 +34,10 @@ public static class ServiceCollectionExtensions
     {
         services.AddTelemetry();
         services.AddDistributedMemoryCache(); // MemoryDistributedCache wraps around MemoryCache, but this lets us get started with the concept of distributed caching;
+        services.AddDatabase();
         services.AddFetcher();
         services.AddCategorizer();
-        services.AddExporter();
+        services.AddSingleton<Exporter>();
         services.AddHostedService<Worker>();
 
         return services;
@@ -49,6 +50,17 @@ public static class ServiceCollectionExtensions
              .WithTracing(builder => builder.AddSource(_telemetrySourceName).AddConsoleExporter());
 
         return services;
+    }
+
+    private static IServiceCollection AddDatabase(this IServiceCollection services)
+    {
+        return services.AddSingleton<IDatabaseService>(serviceProvider =>
+        {
+            var secrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
+            var settings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
+
+            return new DatabaseService(settings, secrets);
+        });
     }
 
     private static IServiceCollection AddFetcher(this IServiceCollection services)
@@ -92,6 +104,7 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddCategoriesProvider(this IServiceCollection services)
     {
+        services.AddSingleton<CategoryProviderV2>();
         return services.AddSingleton<ICategoryProvider>(serviceProvider =>
         {
             ILogger<CategoryProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoryProvider>>();
@@ -121,18 +134,6 @@ public static class ServiceCollectionExtensions
             var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
 
             return new Categorizer(chatClient, distributedCache, categoriesService, aIFunctionService, llmSettings);
-        });
-    }
-
-    private static IServiceCollection AddExporter(this IServiceCollection services)
-    {
-        return services.AddSingleton(serviceProvider =>
-        {
-            var logger = serviceProvider.GetRequiredService<ILogger<Exporter>>();
-            var secrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
-            var settings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
-
-            return new Exporter(settings, secrets, logger);
         });
     }
 

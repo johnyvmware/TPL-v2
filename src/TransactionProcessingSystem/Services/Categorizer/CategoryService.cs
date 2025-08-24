@@ -12,33 +12,32 @@ public interface ICategoryService
     bool IsValidSubCategory(string subCategory);
 }
 
-public class CategoryService(ICategoryProvider categoriesProvider) : ICategoryService
+public class CategoryService(CategoryProviderV2 categoriesProvider) : ICategoryService
 {
-    public IEnumerable<string> GetSubCategories(string mainCategory)
+    public IEnumerable<Subcategory> GetSubCategories(string mainCategory)
     {
-        return categoriesProvider.ValidCombinations.TryGetValue(mainCategory, out var subCategories)
-            ? subCategories
-            : Enumerable.Empty<string>();
+        return categoriesProvider.GetSubcategories(mainCategory);
     }
 
     public IEnumerable<string> GetMainCategories()
     {
-        return categoriesProvider.ValidCombinations.Keys;
+        return categoriesProvider.Categories.Select(c => c.Name);
     }
 
     public bool IsValidCombination(string mainCategory, string subCategory)
     {
-        return categoriesProvider.ValidCombinations.TryGetValue(mainCategory, out var validSubCategories) && validSubCategories.Contains(subCategory);
+        return categoriesProvider.Categories.FirstOrDefault(c => c.Name == mainCategory)?.Subcategories.Select(sc => sc.Name)
+            .Contains(subCategory) ?? false;
     }
 
     public bool IsValidMainCategory(string mainCategory)
     {
-        return categoriesProvider.MainCategories.Contains(mainCategory);
+        return categoriesProvider.Categories.Any(c => c.Name == mainCategory);
     }
 
     public bool IsValidSubCategory(string subCategory)
     {
-        return categoriesProvider.SubCategories.Contains(subCategory);
+        return categoriesProvider.Categories.SelectMany(c => c.Subcategories).Any(sc => sc.Name == subCategory);
     }
 
     public CategoryAssignmentResult ValidateCategorization(CategoryAssignment categorization)
@@ -64,7 +63,7 @@ public class CategoryService(ICategoryProvider categoriesProvider) : ICategorySe
         {
             return CategoryAssignmentResult.Failure(
                 $"Unknown sub category: '{categorization.SubCategory}'. " +
-                $"All valid sub categories: {string.Join(", ", categoriesProvider.SubCategories)}");
+                $"All valid sub categories: {string.Join(", ", categoriesProvider.Categories.SelectMany(c => c.Subcategories).Select(sc => sc.Name))}");
         }
 
         if (!IsValidCombination(categorization.MainCategory, categorization.SubCategory))

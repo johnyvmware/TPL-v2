@@ -26,7 +26,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="9.8.0" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.7.1-preview.1.25365.4" />
-    <PackageReference Include="Microsoft.Graph" Version="5.90.0" />
+    <PackageReference Include="Microsoft.Graph" Version="5.91.0" />
     <PackageReference Include="Azure.Identity" Version="1.15.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.8" />

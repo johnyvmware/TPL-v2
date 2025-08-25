@@ -9,6 +9,7 @@ public interface ICategoryValidator
 
 public class CategoryService(CategoryProviderV2 categoriesProvider) : ICategoryValidator
 {
+    // simplify!
     public CategoryAssignmentResult Validate(CategoryAssignment categorization)
     {
         if (string.IsNullOrWhiteSpace(categorization.MainCategory))

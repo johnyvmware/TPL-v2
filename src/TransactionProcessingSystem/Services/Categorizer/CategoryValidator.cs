@@ -61,5 +61,4 @@ public class CategoryService(CategoryProviderV2 categoriesProvider) : ICategoryV
         var validSubCategories = categoriesProvider.GetSubCategoriesFor(mainCategory);
         return validSubCategories.Any(sc => sc.Name == subCategory);
     }
-
 }

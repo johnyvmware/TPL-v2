@@ -24,6 +24,12 @@ public class CategoryProviderV2(IDatabaseService databaseService)
         return _categories.FirstOrDefault(c => c.Name == mainCategory)?.Subcategories.Select(sc => sc.ToCategoryInfo()).ToList() ?? [];
     }
 
+    public IReadOnlyList<CategoryInfo> GetSubCategories()
+    {
+        return _categories.SelectMany(c => c.Subcategories).Select(sc => sc.ToCategoryInfo()).ToList() ?? [];
+    }
+
+
     public IReadOnlyList<CategoryInfo> GetMainCategories()
     {
         return [.. _categories.Select(c => c.ToCategoryInfo())];

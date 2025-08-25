@@ -4,33 +4,33 @@ using TransactionProcessingSystem.Services.Categorizer;
 
 namespace TransactionProcessingSystem.Services;
 
-public class AIFunctionService(ICategoryService categoriesService)
+public class AIFunctionService(CategoryProviderV2 categoryProvider)
 {
     public AIFunction GetSubCategoriesAIFunction()
     {
-        var get_sub_categories = AIFunctionFactory.Create(GetSubCategories, "get_sub_categories");
+        var getSubCategories = AIFunctionFactory.Create(GetSubCategories, "get_sub_categories");
 
-        return get_sub_categories;
+        return getSubCategories;
     }
 
     public AIFunction GetMainCategoriesAIFunction()
     {
-        var get_main_categories = AIFunctionFactory.Create(GetMainCategories, "get_main_categories");
+        var getMainCategories = AIFunctionFactory.Create(GetMainCategories, "get_main_categories");
 
-        return get_main_categories;
+        return getMainCategories;
     }
 
-    [Description("Get valid sub categories for a given main category")]
-    public IEnumerable<string> GetSubCategories(
+    [Description("Get sub categories for a given main category")]
+    public IEnumerable<CategoryInfo> GetSubCategories(
         [Description("The main category name to get subcategories for")]
         string mainCategory)
     {
-        return categoriesService.GetSubCategories(mainCategory);
+        return categoryProvider.GetSubCategoriesFor(mainCategory);
     }
 
-    [Description("Get all available main categories")]
-    public IEnumerable<string> GetMainCategories()
+    [Description("Get main categories")]
+    public IEnumerable<CategoryInfo> GetMainCategories()
     {
-        return categoriesService.GetMainCategories();
+        return categoryProvider.GetMainCategories();
     }
 }

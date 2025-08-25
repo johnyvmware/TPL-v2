@@ -10,7 +10,7 @@ namespace TransactionProcessingSystem.Components;
 public class Categorizer(
     IChatClient chatClient,
     IDistributedCache distributedCache,
-    ICategoryService categoriesService,
+    ICategoryValidator categoryValidator,
     AIFunctionService aIFunctionService,
     LlmOptions settings)
 {
@@ -50,7 +50,7 @@ public class Categorizer(
             ChatResponse<CategoryAssignment> response = await chatClient.GetResponseAsync<CategoryAssignment>(chatHistory, chatOptions);
             CategoryAssignment categoryAssignment = response.Result;
 
-            CategoryAssignmentResult validationResult = categoriesService.ValidateCategorization(categoryAssignment);
+            CategoryAssignmentResult validationResult = categoryValidator.Validate(categoryAssignment);
 
             if (validationResult.IsValid)
             {

@@ -6,6 +6,7 @@ namespace TransactionProcessingSystem.Services;
 public interface IDatabaseService : IAsyncDisposable
 {
     IExecutableQuery<IRecord, IRecord> ExecutableQuery(string cypher);
+    Task<EagerResult<IReadOnlyList<IRecord>>> ExecuteQueryAsync(string cypher);
     Task VerifyConnectionAsync();
 }
 
@@ -32,6 +33,14 @@ public sealed class DatabaseService(Neo4jOptions settings, Neo4jSecrets secrets)
         return _driver
             .ExecutableQuery(cypher)
             .WithConfig(new QueryConfig(database: settings.Database));
+    }
+
+    public Task<EagerResult<IReadOnlyList<IRecord>>> ExecuteQueryAsync(string cypher)
+    {
+        return _driver
+            .ExecutableQuery(cypher)
+            .WithConfig(new QueryConfig(database: settings.Database))
+            .ExecuteAsync();
     }
 
     public Task VerifyConnectionAsync()

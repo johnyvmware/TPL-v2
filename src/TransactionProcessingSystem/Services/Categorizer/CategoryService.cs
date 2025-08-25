@@ -14,9 +14,9 @@ public interface ICategoryService
 
 public class CategoryService(CategoryProviderV2 categoriesProvider) : ICategoryService
 {
-    public IEnumerable<Subcategory> GetSubCategories(string mainCategory)
+    public IEnumerable<string> GetSubCategories(string mainCategory)
     {
-        return categoriesProvider.GetSubcategories(mainCategory);
+        return categoriesProvider.GetSubCategories(mainCategory).Select(sc => sc.Name);
     }
 
     public IEnumerable<string> GetMainCategories()

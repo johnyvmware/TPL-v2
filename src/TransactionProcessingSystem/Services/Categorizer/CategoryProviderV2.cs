@@ -1,45 +1,31 @@
-using System;
-using Microsoft.Graph.Security.Labels.Categories.Item.Subcategories;
+using Neo4j.Driver;
 using Neo4j.Driver.Mapping;
 
 namespace TransactionProcessingSystem.Services.Categorizer;
 
 public class CategoryProviderV2(IDatabaseService databaseService)
 {
-    private IReadOnlyList<Maincategory> _categories = [];
-    public IReadOnlyList<Maincategory> Categories => _categories;
+    private readonly List<MainCategory> _categories = [];
+    public IReadOnlyList<MainCategory> Categories => _categories;
 
     public async Task LoadAsync()
     {
-        var cypher = """
-            MATCH (main:Category)
-            WHERE NOT (main)-[:CHILD_OF]->(:Category)
-            OPTIONAL MATCH (sub:Category)-[:CHILD_OF]->(main)
-            WITH main, collect(DISTINCT {name: sub.name, definition: sub.definition}) AS subcategories
+        var loadCategoriesCypher = """
+            MATCH (main:Category:Main)-[:HAS_SUBCATEGORY]->(sub:Category:Sub)
+            WITH main, collect({name: sub.name, definition: sub.definition}) AS subcategories
             RETURN main.name AS name, main.definition AS definition, subcategories
             """;
 
-        var cursor = await databaseService
-            .ExecutableQuery(cypher)
-            .ExecuteAsync();
-
-        var list = new List<Maincategory>();
-
-        foreach (var record in cursor.Result)
-        {
-            var dto = record.AsObject<Maincategory>();
-            list.Add(dto);
-        }
-
-        _categories = list;
+        EagerResult<IReadOnlyList<IRecord>> eagerResult = await databaseService.ExecuteQueryAsync(loadCategoriesCypher);
+        MapToCategories(eagerResult);
     }
 
-    public IEnumerable<Subcategory> GetSubcategories(string mainCategory)
+    public IEnumerable<SubCategory> GetSubCategories(string mainCategory)
     {
         return _categories.FirstOrDefault(c => c.Name == mainCategory)?.Subcategories ?? [];
     }
 
-    public IEnumerable<Maincategory> GetMainCategories()
+    public IEnumerable<MainCategory> GetMainCategories()
     {
         return _categories;
     }
@@ -58,5 +44,14 @@ public class CategoryProviderV2(IDatabaseService databaseService)
     {
         return _categories.FirstOrDefault(c => c.Name == mainCategory)?.Subcategories.Select(sc => sc.Name)
             .Contains(subCategory) ?? false;
+    }
+
+    private void MapToCategories(EagerResult<IReadOnlyList<IRecord>> eagerResult)
+    {
+        foreach (var record in eagerResult.Result)
+        {
+            var dto = record.AsObject<MainCategory>();
+            _categories.Add(dto);
+        }
     }
 }

@@ -18,7 +18,7 @@ Return a single JSON object (not code-formatted):
 {
   "Reasoning": "[Explain why you chose this category/subcategory based on specific transaction details]",
   "MainCategory": "[Exact category name from get_main_categories]",
-  "SubCategory": "[Exact subcategory name from get_sub_categories]"
+  "SubCategory": "[Exact category name from get_sub_categories]"
 }
 
 ## Example Reasoning Pattern:

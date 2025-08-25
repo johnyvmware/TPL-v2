@@ -2,7 +2,7 @@ using Neo4j.Driver.Mapping;
 
 namespace TransactionProcessingSystem.Services.Categorizer;
 
-public record Subcategory
+public record SubCategory
 {
     [MappingSource("name")]
     public required string Name { get; init; }
@@ -11,14 +11,15 @@ public record Subcategory
     public required string Definition { get; init; }
 }
 
-public class Maincategory
+public class MainCategory(
+    string name,
+    string definition,
+    [MappingSource("subcategories")] List<SubCategory> subcategories)
 {
-    [MappingSource("name")]
-    public required string Name { get; init; }
+    public string Name { get; } = name;
 
-    [MappingSource("definition")]
-    public required string Definition { get; init; }
+    public string Definition { get; } = definition;
 
     [MappingSource("subcategories")]
-    public List<Subcategory> Subcategories { get; init; } = [];
+    public IReadOnlyList<SubCategory> Subcategories { get; } = subcategories;
 }

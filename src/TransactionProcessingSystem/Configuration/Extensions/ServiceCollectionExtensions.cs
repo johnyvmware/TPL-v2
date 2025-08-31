@@ -76,7 +76,7 @@ public static class ServiceCollectionExtensions
     private static void AddCategorizer(this IServiceCollection services)
     {
         services.AddChatClient();
-        services.AddCategoriesProvider();
+        services.AddSingleton<CategoryProviderV2>();
         services.AddCategorizerImplementation();
 
         services.AddSingleton<AIFunctionService>();
@@ -99,27 +99,6 @@ public static class ServiceCollectionExtensions
                 .Build(serviceProvider);
 
             return chatClient;
-        });
-    }
-
-    private static IServiceCollection AddCategoriesProvider(this IServiceCollection services)
-    {
-        services.AddSingleton<CategoryProviderV2>();
-        return services.AddSingleton<ICategoryProvider>(serviceProvider =>
-        {
-            ILogger<CategoryProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoryProvider>>();
-            string categoriesFilePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
-            string absoluteCategoriesFilePath = Path.Combine(AppContext.BaseDirectory, categoriesFilePath);
-
-            if (!File.Exists(absoluteCategoriesFilePath))
-            {
-                throw new FileNotFoundException($"Category configuration file not found at: {absoluteCategoriesFilePath}");
-            }
-
-            CategoryProvider categoriesProvider = new(absoluteCategoriesFilePath, logger);
-            categoriesProvider.Load(); // Maybe this could be move to the pipeline and performed in a async manner
-
-            return categoriesProvider;
         });
     }
 

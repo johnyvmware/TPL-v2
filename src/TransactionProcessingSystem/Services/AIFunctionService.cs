@@ -20,7 +20,7 @@ public class AIFunctionService(CategoryProviderV2 categoryProvider)
         return getMainCategories;
     }
 
-    [Description("Get sub categories for a given main category")]
+    [Description("Get sub categories and their definition for a given main category")]
     public IEnumerable<CategoryInfo> GetSubCategories(
         [Description("The main category name to get subcategories for")]
         string mainCategory)
@@ -28,7 +28,7 @@ public class AIFunctionService(CategoryProviderV2 categoryProvider)
         return categoryProvider.GetSubCategoriesFor(mainCategory);
     }
 
-    [Description("Get main categories")]
+    [Description("Get main categories and their definition")]
     public IEnumerable<CategoryInfo> GetMainCategories()
     {
         return categoryProvider.GetMainCategories();

@@ -110,6 +110,10 @@ MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Recreat
 MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Dining'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
 
 // Transaction modelling
+
+Type of transaction:
+
+
 Transaction : name and occuredAt
 Receiver : name
 Title : value

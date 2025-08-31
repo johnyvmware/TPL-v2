@@ -41,6 +41,8 @@ internal sealed class Worker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await _categoryProvider.LoadAsync();
+        
+
         _fetcher.Fetch();
         //await _exporter.CreateGraphAsync();
         List<Transaction> rawTransactions = _fetcher.Fetch();

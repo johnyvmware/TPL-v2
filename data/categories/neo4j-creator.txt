@@ -112,15 +112,45 @@ MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Dining'
 // Transaction modelling
 
 Type of transaction:
+- ZAKUP PRZY UŻYCIU KARTY - ok
+- BLIK ZAKUP E-COMMERCE - ok 
+- BLIK P2P-PRZYCHODZĄCY - ok 
+- PRZELEW ZEWNĘTRZNY WYCHODZĄCY - ok
+- PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY - ok
+- BLIK P2P-WYCHODZĄCY - ok
+- PRZELEW WEWNĘTRZNY PRZYCHODZĄCY - ok
+- PRZELEW WEWNĘTRZNY WYCHODZĄCY - ok
+
+// ignore 
+- POS ZWROT TOWARU
+- WYPŁATA W BANKOMACIE
+- BLIK KOR. ZAKUPU E-COMMERCE
+- BLIK WYPŁATA ATM KRAJOWY
 
 
-Transaction : name and occuredAt
-Receiver : name
-Title : value
-Description : value
+ZAKUP PRZY UŻYCIU KARTY:
+- sklep ( z tyutul)
+- miejscowosc (z tytul)
 
-// Transaction relationships
-Transaction HAS_DESCRIPTION Description
-Transaction RECEIVED_BY Receiver
-Transaction HAS_TITLE Title
-Transaction IN_CATEGORY Category
+PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY
+PRZELEW WEWNĘTRZNY PRZYCHODZĄCY
+- nadawca (z odbiorca / nadawca)
+- tytul (z tytul)
+
+PRZELEW ZEWNĘTRZNY WYCHODZĄCY
+PRZELEW WEWNĘTRZNY WYCHODZĄCY
+- odbiorca ( z odbiorca / nadawca)
+- tytul ( z tytul)
+
+BLIK ZAKUP E-COMMERCE:
+- sklep (z tytuł)
+
+BLIK P2P-PRZYCHODZĄCY:
+- nie dodawac podkategorii, to jest przelew na telefon przychodzacy
+
+BLIK P2P-WYCHODZĄCY:
+- nie dodawac podkategorii, to jest przelew na telefon wychodzacy
+- ale dziwne ze bank nie sledzi do kogo i jak
+
+--- 
+w prompt placeholder i wypelniac recordami jakos

@@ -61,48 +61,4 @@ public class Fetcher(
 
         return allTransactions;
     }
-
-    public void GetUnique()
-    {
-        var inputDirectory = Path.Combine(AppContext.BaseDirectory, settings.InputDirectory);
-        var fileName = "78196015_240101_250821.csv";
-        var filePath = Path.Combine(inputDirectory, fileName);
-
-        var badRecords = new List<string>();
-
-        var config = CsvConfiguration.FromAttributes<Transaction>();
-        config.BadDataFound = context => badRecords.Add(context.RawRecord);
-
-        var unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        using var reader = new StreamReader(filePath, System.Text.Encoding.GetEncoding(settings.Encoding));
-        using var csv = new CsvReader(reader, config);
-        var fileTransactions = new List<Transaction>();
-
-        while (csv.Read())
-        {
-            try
-            {
-                var record = csv.GetRecord<Transaction>();
-                if (record != null)
-                {
-                    fileTransactions.Add(record);
-                }
-                else
-                {
-                    badRecords.Add(csv.Context?.Parser?.RawRecord ?? string.Empty);
-                }
-            }
-            catch (CsvHelperException)
-            {
-                badRecords.Add(csv.Context?.Parser?.RawRecord ?? string.Empty);
-            }
-        }
-
-
-        var descriptionCounts = fileTransactions
-            .Where(t => !string.IsNullOrWhiteSpace(t.Description))
-            .GroupBy(t => t.Description.Trim(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-    }
 }

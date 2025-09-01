@@ -76,7 +76,7 @@ public static class ServiceCollectionExtensions
     private static void AddCategorizer(this IServiceCollection services)
     {
         services.AddChatClient();
-        services.AddSingleton<CategoryProviderV2>();
+        services.AddSingleton<CategoryProvider>();
         services.AddCategorizerImplementation();
 
         services.AddSingleton<AIFunctionService>();

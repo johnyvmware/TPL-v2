@@ -7,7 +7,7 @@ public sealed class Exporter(IDatabaseService databaseService)
 {
     private readonly IDatabaseService _databaseService = databaseService;
 
-    public async Task ExportAsync(Transaction transaction)
+    public async Task ExportAsync(RawTransaction transaction)
     {
         var result = await _databaseService.ExecutableQuery(@"
             CREATE (a:Person {name: $name})

@@ -24,15 +24,15 @@ public class Categorizer(
         ]
     };
 
-    public async Task<Transaction> CategorizeAsync(Transaction transaction)
+    public async Task<RawTransaction> CategorizeAsync(RawTransaction transaction)
     {
         List<ChatMessage> chatMessages = await GetChatMessagesAsync(transaction);
         CategoryAssignment? categoryAssignment = await InternalCategorizeAsync(chatMessages, _chatOptions);
 
-        return transaction with { CategoryAssignment = categoryAssignment };
+        return transaction; // with { CategoryAssignment = categoryAssignment };
     }
 
-    private async Task<List<ChatMessage>> GetChatMessagesAsync(Transaction transaction)
+    private async Task<List<ChatMessage>> GetChatMessagesAsync(RawTransaction transaction)
     {
         ChatMessage systemMessage = await CreateSystemMessageAsync();
         ChatMessage userMessage = CreateUserMessage(transaction);
@@ -90,7 +90,7 @@ public class Categorizer(
         return categorizerPrompt;
     }
 
-    private static ChatMessage CreateUserMessage(Transaction transaction)
+    private static ChatMessage CreateUserMessage(RawTransaction transaction)
     {
         string userPrompt = CreateUserPrompt(transaction);
         ChatMessage userChatMessage = new(ChatRole.User, userPrompt);
@@ -98,12 +98,12 @@ public class Categorizer(
         return userChatMessage;
     }
 
-    private static string CreateUserPrompt(Transaction transaction)
+    private static string CreateUserPrompt(RawTransaction transaction)
     {
         string userPrompt = $"description: \"{transaction.Description.Trim()}\", title: \"{transaction.Title.Trim()}\"";
-        if (string.IsNullOrWhiteSpace(transaction.Receiver) is not true)
+        if (string.IsNullOrWhiteSpace(transaction.ReceiverOrSender) is not true)
         {
-            userPrompt += $", receiver: \"{transaction.Receiver.Trim()}\"";
+            userPrompt += $", receiver: \"{transaction.ReceiverOrSender.Trim()}\"";
         }
 
         return userPrompt;

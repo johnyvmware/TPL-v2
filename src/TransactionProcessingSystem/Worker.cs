@@ -10,14 +10,14 @@ internal sealed class Worker : BackgroundService
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly Fetcher _fetcher;
     private readonly Categorizer _categorizer;
-    private readonly CategoryProviderV2 _categoryProvider;
+    private readonly CategoryProvider _categoryProvider;
     private readonly Exporter _exporter;
 
     public Worker(
         IHostApplicationLifetime hostApplicationLifetime,
         Fetcher fetcher,
         Categorizer categorizer,
-        CategoryProviderV2 categoryProvider,
+        CategoryProvider categoryProvider,
         Exporter exporter)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
@@ -44,18 +44,11 @@ internal sealed class Worker : BackgroundService
         await _categoryProvider.LoadAsync();
 
         // Step 2: Fetch transactions
-        _fetcher.Fetch();
+        List<RawTransaction> rawTransactions = _fetcher.Fetch();
 
-        
-        //await _exporter.CreateGraphAsync();
-        List<Transaction> rawTransactions = _fetcher.Fetch();
-        Transaction categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
-        
-        
-        if (categorization != null)
-        {
-            // export it
-        }
+        // Step 3: Match raw transaction to transaction type
+        List<Transaction> transactions = Matcher.Match(rawTransactions);
+
 
 /*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
                         List<Transaction> categorizedTransactions = [];

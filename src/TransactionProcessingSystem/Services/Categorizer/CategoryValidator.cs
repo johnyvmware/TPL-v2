@@ -7,7 +7,7 @@ public interface ICategoryValidator
     CategoryAssignmentResult Validate(CategoryAssignment categorization);
 }
 
-public class CategoryService(CategoryProviderV2 categoriesProvider) : ICategoryValidator
+public class CategoryService(CategoryProvider categoriesProvider) : ICategoryValidator
 {
     // simplify!
     public CategoryAssignmentResult Validate(CategoryAssignment categorization)

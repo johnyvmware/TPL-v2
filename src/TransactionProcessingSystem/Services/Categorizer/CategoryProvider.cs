@@ -3,7 +3,7 @@ using Neo4j.Driver.Mapping;
 
 namespace TransactionProcessingSystem.Services.Categorizer;
 
-public class CategoryProviderV2(IDatabaseService databaseService)
+public class CategoryProvider(IDatabaseService databaseService)
 {
     private readonly List<MainCategory> _categories = [];
 

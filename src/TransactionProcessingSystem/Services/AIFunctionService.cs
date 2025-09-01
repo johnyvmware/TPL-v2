@@ -4,7 +4,7 @@ using TransactionProcessingSystem.Services.Categorizer;
 
 namespace TransactionProcessingSystem.Services;
 
-public class AIFunctionService(CategoryProviderV2 categoryProvider)
+public class AIFunctionService(CategoryProvider categoryProvider)
 {
     public AIFunction GetSubCategoriesAIFunction()
     {

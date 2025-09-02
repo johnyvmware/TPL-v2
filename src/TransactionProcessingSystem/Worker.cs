@@ -49,17 +49,20 @@ internal sealed class Worker : BackgroundService
         // Step 3: Match raw transaction to transaction type
         List<Transaction> transactions = Matcher.Match(rawTransactions);
 
+        // Step 4: Categorize
+        var categorizedTransaction = await _categorizer.CategorizeAsync(transactions.First());
 
-/*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
-                        List<Transaction> categorizedTransactions = [];
-                        foreach (var transaction in rawTransactions.Skip(2))
-                        {
-                            Transaction? categorizedTransaction = await _categorizer.CategorizeTransactionAsync(transaction);
-                            if (categorizedTransaction != null)
-                            {
-                                categorizedTransactions.Add(categorizedTransaction);
-                            }
-                        } */
+        // I need to have telemetry inspector = net aspiere
+        /*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
+                                List<Transaction> categorizedTransactions = [];
+                                foreach (var transaction in rawTransactions.Skip(2))
+                                {
+                                    Transaction? categorizedTransaction = await _categorizer.CategorizeTransactionAsync(transaction);
+                                    if (categorizedTransaction != null)
+                                    {
+                                        categorizedTransactions.Add(categorizedTransaction);
+                                    }
+                                } */
 
         _hostApplicationLifetime.StopApplication();
     }

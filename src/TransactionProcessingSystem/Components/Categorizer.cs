@@ -14,7 +14,8 @@ public class Categorizer(
     AIFunctionService aIFunctionService,
     LlmOptions settings)
 {
-    private const string CategorizerPromptCacheKey = "CategorizerPrompt";
+    private const string DeveloperPromptCacheKey = "CategorizerDeveloperPrompt";
+    private const string UserPromptCacheKey = "CategorizerUserPrompt";
 
     private readonly ChatOptions _chatOptions = new()
     {
@@ -24,32 +25,31 @@ public class Categorizer(
         ]
     };
 
-    public async Task<RawTransaction> CategorizeAsync(RawTransaction transaction)
+    public async Task<Transaction> CategorizeAsync(Transaction transaction)
     {
         List<ChatMessage> chatMessages = await GetChatMessagesAsync(transaction);
-        CategoryAssignment? categoryAssignment = await InternalCategorizeAsync(chatMessages, _chatOptions);
+        CategoryAssignment? categoryAssignment = await CategorizeAsync(chatMessages);
 
-        return transaction; // with { CategoryAssignment = categoryAssignment };
+        return transaction with { CategoryAssignment = categoryAssignment };
     }
 
-    private async Task<List<ChatMessage>> GetChatMessagesAsync(RawTransaction transaction)
+    private async Task<List<ChatMessage>> GetChatMessagesAsync(Transaction transaction)
     {
         ChatMessage systemMessage = await CreateSystemMessageAsync();
-        ChatMessage userMessage = CreateUserMessage(transaction);
+        ChatMessage userMessage = await CreateUserMessage(transaction);
         List<ChatMessage> chatMessages = [systemMessage, userMessage];
 
         return chatMessages;
     }
 
-    private async Task<CategoryAssignment?> InternalCategorizeAsync(List<ChatMessage> chatHistory, ChatOptions chatOptions)
+    private async Task<CategoryAssignment?> CategorizeAsync(List<ChatMessage> chatHistory)
     {
         // Retry logic with validation
         int maxRetries = 3;
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            ChatResponse<CategoryAssignment> response = await chatClient.GetResponseAsync<CategoryAssignment>(chatHistory, chatOptions);
+            ChatResponse<CategoryAssignment> response = await chatClient.GetResponseAsync<CategoryAssignment>(chatHistory, _chatOptions);
             CategoryAssignment categoryAssignment = response.Result;
-
             CategoryAssignmentResult validationResult = categoryValidator.Validate(categoryAssignment);
 
             if (validationResult.IsValid)
@@ -70,42 +70,50 @@ public class Categorizer(
 
     private async Task<ChatMessage> CreateSystemMessageAsync()
     {
-        string categorizerPrompt = await ReadCategorizerPromptAsync();
+        string categorizerPrompt = await ReadDeveloperPromptAsync();
         ChatMessage chatMessage = new(ChatRole.System, categorizerPrompt);
 
         return chatMessage;
     }
 
-    private async Task<string> ReadCategorizerPromptAsync()
+    private async Task<string> ReadDeveloperPromptAsync()
     {
-        string? cachedPrompt = await distributedCache.GetStringAsync(CategorizerPromptCacheKey);
+        string? cachedPrompt = await distributedCache.GetStringAsync(DeveloperPromptCacheKey);
         if (cachedPrompt is not null)
+        {
             return cachedPrompt;
+        }
 
         string categorizerPromptPath = Path.Combine(AppContext.BaseDirectory, settings.Prompts.Path, settings.Prompts.CategorizerDeveloperMessage);
         string categorizerPrompt = await File.ReadAllTextAsync(categorizerPromptPath);
 
-        await distributedCache.SetStringAsync(CategorizerPromptCacheKey, categorizerPrompt);
+        await distributedCache.SetStringAsync(DeveloperPromptCacheKey, categorizerPrompt);
 
         return categorizerPrompt;
     }
 
-    private static ChatMessage CreateUserMessage(RawTransaction transaction)
+    private async Task<ChatMessage> CreateUserMessage(Transaction transaction)
     {
-        string userPrompt = CreateUserPrompt(transaction);
+        string userPrompt = await ReadUserPromptAsync(transaction);
         ChatMessage userChatMessage = new(ChatRole.User, userPrompt);
 
         return userChatMessage;
     }
 
-    private static string CreateUserPrompt(RawTransaction transaction)
+    private async Task<string> ReadUserPromptAsync(Transaction transaction)
     {
-        string userPrompt = $"description: \"{transaction.Description.Trim()}\", title: \"{transaction.Title.Trim()}\"";
-        if (string.IsNullOrWhiteSpace(transaction.ReceiverOrSender) is not true)
+        string? cachedPrompt = await distributedCache.GetStringAsync(UserPromptCacheKey);
+        if (cachedPrompt is not null)
         {
-            userPrompt += $", receiver: \"{transaction.ReceiverOrSender.Trim()}\"";
+            return cachedPrompt;
         }
 
-        return userPrompt;
+        string categorizerPromptPath = Path.Combine(AppContext.BaseDirectory, settings.Prompts.Path, settings.Prompts.CategorizerUserMessage);
+        string categorizerPrompt = await File.ReadAllTextAsync(categorizerPromptPath);
+        categorizerPrompt = categorizerPrompt.Replace("{TransactionDescription}", transaction.Describe());
+
+        await distributedCache.SetStringAsync(UserPromptCacheKey, categorizerPrompt);
+
+        return categorizerPrompt;
     }
 }

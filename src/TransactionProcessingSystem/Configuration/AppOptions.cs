@@ -46,6 +46,9 @@ public record PromptsOptions
 
     [Required]
     public required string CategorizerDeveloperMessage { get; init; }
+
+    [Required]
+    public required string CategorizerUserMessage { get; init; }
 }
 
 public record StructuredOutputsOptions

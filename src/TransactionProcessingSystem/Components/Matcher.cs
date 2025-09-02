@@ -10,7 +10,6 @@ public class Matcher
 
         foreach (var raw in rawTransactions)
         {
-
             Transaction transaction = Match(raw);
             transactions.Add(transaction);
         }
@@ -26,6 +25,8 @@ public class Matcher
             var t when BlikP2PIncoming.TryMatch(t, out var blikP2PIncoming) => blikP2PIncoming,
             var t when BlikP2POutgoing.TryMatch(t, out var blikP2POutgoing) => blikP2POutgoing,
             var t when CardPurchase.TryMatch(t, out var cardPurchase) => cardPurchase,
+            var t when TransferOutgoing.TryMatch(t, out var transferOutgoing) => transferOutgoing,
+            var t when TransferIncoming.TryMatch(t, out var transferIncoming) => transferIncoming,
             _ => OtherTransaction.Match(rawTransaction),
         };
     }

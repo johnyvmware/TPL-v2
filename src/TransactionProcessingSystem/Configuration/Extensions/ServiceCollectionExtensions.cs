@@ -1,16 +1,16 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using TransactionProcessingSystem.Services;
-using TransactionProcessingSystem.Components;
 using System.Text;
-using OpenAI.Chat;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
-using OpenTelemetry.Trace;
-using OpenTelemetry.Logs;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OpenAI.Chat;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Trace;
+using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Configuration.Validators;
+using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Services.Categorizer;
 
 namespace TransactionProcessingSystem.Configuration.Extensions;
@@ -138,7 +138,6 @@ public static class ServiceCollectionExtensions
     {
         // ValidateOnStart() registers the validation to run when the first service requiring IOptions<T>
         // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the host build phase.
-
         services
             .AddOptionsWithValidateOnStart<LlmOptions>()
             .Bind(configuration.GetRequiredSection(LlmOptions.SectionName))

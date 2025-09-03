@@ -22,7 +22,7 @@ public class Categorizer(
         Tools = [
             aIFunctionService.GetSubCategoriesAIFunction(),
             aIFunctionService.GetMainCategoriesAIFunction()
-        ]
+        ],
     };
 
     public async Task<Transaction> CategorizeAsync(Transaction transaction)
@@ -60,7 +60,6 @@ public class Categorizer(
             // Add validation error to chat history for retry OR WORK WITH ID FROM AI EXTENSIONS!
             if (attempt < maxRetries - 1)
             {
-                //chatHistory.Add(new ChatMessage(ChatRole.Assistant, $"Selected: {categorization.MainCategory} - {categorization.SubCategory}"));
                 chatHistory.Add(new ChatMessage(ChatRole.User, $"Error: {validationResult.ErrorMessage}. Please provide a valid categorization."));
             }
         }

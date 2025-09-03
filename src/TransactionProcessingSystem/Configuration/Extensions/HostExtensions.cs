@@ -24,7 +24,8 @@ public static class HostExtensions
         host.ValidateOptions<Neo4jSecrets>();
     }
 
-    private static IHost ValidateOptions<TOptions>(this IHost host) where TOptions : class
+    private static IHost ValidateOptions<TOptions>(this IHost host)
+        where TOptions : class
     {
         var options = host.Services.GetRequiredService<IOptions<TOptions>>();
         try
@@ -35,6 +36,7 @@ public static class HostExtensions
         {
             throw new InvalidOperationException($"Options validation failed for {typeof(TOptions).Name}", ex);
         }
+
         return host;
     }
 }

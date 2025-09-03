@@ -5,7 +5,7 @@ namespace TransactionProcessingSystem.Services.Categorizer;
 
 public class CategoryProvider(IDatabaseService databaseService)
 {
-    private readonly List<MainCategory> _categories = [];
+    private readonly List<MainCategory> categories = [];
 
     public async Task LoadAsync()
     {
@@ -21,18 +21,17 @@ public class CategoryProvider(IDatabaseService databaseService)
 
     public IReadOnlyList<CategoryInfo> GetSubCategoriesFor(string mainCategory)
     {
-        return _categories.FirstOrDefault(c => c.Name == mainCategory)?.Subcategories.Select(sc => sc.ToCategoryInfo()).ToList() ?? [];
+        return categories.FirstOrDefault(c => c.Name == mainCategory)?.Subcategories.Select(sc => sc.ToCategoryInfo()).ToList() ?? [];
     }
 
     public IReadOnlyList<CategoryInfo> GetSubCategories()
     {
-        return _categories.SelectMany(c => c.Subcategories).Select(sc => sc.ToCategoryInfo()).ToList() ?? [];
+        return categories.SelectMany(c => c.Subcategories).Select(sc => sc.ToCategoryInfo()).ToList() ?? [];
     }
-
 
     public IReadOnlyList<CategoryInfo> GetMainCategories()
     {
-        return [.. _categories.Select(c => c.ToCategoryInfo())];
+        return [.. categories.Select(c => c.ToCategoryInfo())];
     }
 
     private void MapToCategories(EagerResult<IReadOnlyList<IRecord>> eagerResult)
@@ -40,7 +39,7 @@ public class CategoryProvider(IDatabaseService databaseService)
         foreach (var record in eagerResult.Result)
         {
             var dto = record.AsObject<MainCategory>();
-            _categories.Add(dto);
+            categories.Add(dto);
         }
     }
 }

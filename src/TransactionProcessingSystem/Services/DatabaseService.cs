@@ -6,7 +6,9 @@ namespace TransactionProcessingSystem.Services;
 public interface IDatabaseService : IAsyncDisposable
 {
     IExecutableQuery<IRecord, IRecord> ExecutableQuery(string cypher);
+
     Task<EagerResult<IReadOnlyList<IRecord>>> ExecuteQueryAsync(string cypher);
+
     Task VerifyConnectionAsync();
 }
 

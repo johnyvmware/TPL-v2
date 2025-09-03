@@ -36,7 +36,6 @@ internal sealed class Worker : BackgroundService
             Console.WriteLine("Transaction Processing System stopped.");
         });
     }
-    
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

@@ -26,7 +26,7 @@ public class CategoryProvider(IDatabaseService databaseService)
 
     public IReadOnlyList<CategoryInfo> GetSubCategories()
     {
-        return categories.SelectMany(c => c.Subcategories).Select(sc => sc.ToCategoryInfo()).ToList() ?? [];
+        return categories.SelectMany(c => c.Subcategories).Select(sc => sc.ToCategoryInfo()).ToList();
     }
 
     public IReadOnlyList<CategoryInfo> GetMainCategories()

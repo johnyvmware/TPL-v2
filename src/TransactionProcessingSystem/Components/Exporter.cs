@@ -57,7 +57,8 @@ public sealed class Exporter : IAsyncDisposable
             .ExecuteAsync();
 
         // Loop through results and print people's name
-        foreach (var record in result.Result) {
+        foreach (var record in result.Result)
+        {
             Console.WriteLine(record.Get<string>("name"));
         }
 

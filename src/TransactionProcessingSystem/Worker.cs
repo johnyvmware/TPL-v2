@@ -32,7 +32,7 @@ internal sealed class Worker : BackgroundService
             Console.WriteLine("Transaction Processing System stopped.");
         });
     }
-    
+
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -41,22 +41,22 @@ internal sealed class Worker : BackgroundService
         await _exporter.QueryGraphAsync();
         List<Transaction> rawTransactions = _fetcher.Fetch();
         CategoryAssignment? categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
-        
+
         if (categorization != null)
         {
             // export it
         }
 
-/*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
-                        List<Transaction> categorizedTransactions = [];
-                        foreach (var transaction in rawTransactions.Skip(2))
-                        {
-                            Transaction? categorizedTransaction = await _categorizer.CategorizeTransactionAsync(transaction);
-                            if (categorizedTransaction != null)
-                            {
-                                categorizedTransactions.Add(categorizedTransaction);
-                            }
-                        } */
+        /*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
+                                List<Transaction> categorizedTransactions = [];
+                                foreach (var transaction in rawTransactions.Skip(2))
+                                {
+                                    Transaction? categorizedTransaction = await _categorizer.CategorizeTransactionAsync(transaction);
+                                    if (categorizedTransaction != null)
+                                    {
+                                        categorizedTransactions.Add(categorizedTransaction);
+                                    }
+                                } */
 
         _hostApplicationLifetime.StopApplication();
     }

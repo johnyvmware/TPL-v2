@@ -7,7 +7,7 @@ RETURN n, r, m
 CREATE CONSTRAINT category_name_unique IF NOT EXISTS FOR (c:Category) REQUIRE c.name IS UNIQUE;
 
 // require a definition on Category nodes
-CREATE CONSTRAINT category_definition_not_null IF NOT EXISTS FOR (c:Category) REQUIRE c.definition IS UNIQUE;
+CREATE CONSTRAINT category_definition_not_null IF NOT EXISTS FOR (c:Category) REQUIRE c.definition IS NOT NULL;
 
 // drop constraints
 DROP CONSTRAINT category_name_unique IF EXISTS;

@@ -51,7 +51,7 @@ internal sealed class Worker : BackgroundService
         // Step 4: Categorize
         var categorizedTransaction = await _categorizer.CategorizeAsync(transactions.First());
 
-        // I need to have telemetry inspector = net aspiere
+        // TODO: I need to have telemetry inspector = net aspire
         /*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
                                 List<Transaction> categorizedTransactions = [];
                                 foreach (var transaction in rawTransactions.Skip(2))

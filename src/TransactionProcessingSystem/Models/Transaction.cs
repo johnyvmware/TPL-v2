@@ -1,26 +1,23 @@
-using CsvHelper.Configuration.Attributes;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace TransactionProcessingSystem.Models;
 
-[Delimiter(";")]
-[CultureInfo("pl-PL")]
-public record Transaction
+public abstract record Transaction(DateTime Date, decimal Amount)
 {
-    [Index(0)]
-    public required DateTime Date { get; init; }
+    public CategoryAssignment? CategoryAssignment { get; init; }
 
-    [Index(2)]
-    public required string Description { get; init; }
+    protected abstract string DisplayName { get; }
 
-    [Index(3)]
-    public required string Title { get; init; }
+    public string Describe()
+    {
+        string description = $"""
+            Transaction type: {DisplayName}
+            {DescribeProperties()}
+            """;
 
-    [Index(4)]
-    public required string Receiver { get; init; }
+        return description;
+    }
 
-    [Index(6)]
-    public required decimal Amount { get; init; }
-
-    [Ignore]
-    public CategoryAssignment? Categorization { get; init; }
+    protected abstract string DescribeProperties();
 }

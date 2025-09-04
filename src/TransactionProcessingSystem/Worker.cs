@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Models;
+using TransactionProcessingSystem.Services.Categorizer;
 
 namespace TransactionProcessingSystem;
 
@@ -9,17 +10,20 @@ internal sealed class Worker : BackgroundService
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly Fetcher _fetcher;
     private readonly Categorizer _categorizer;
+    private readonly CategoryProvider _categoryProvider;
     private readonly Exporter _exporter;
 
     public Worker(
         IHostApplicationLifetime hostApplicationLifetime,
         Fetcher fetcher,
         Categorizer categorizer,
+        CategoryProvider categoryProvider,
         Exporter exporter)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _fetcher = fetcher;
         _categorizer = categorizer;
+        _categoryProvider = categoryProvider;
         _exporter = exporter;
 
         _hostApplicationLifetime.ApplicationStarted.Register(() =>
@@ -33,20 +37,21 @@ internal sealed class Worker : BackgroundService
         });
     }
 
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _exporter.VerifyConnectionAsync();
-        //await _exporter.CreateGraphAsync();
-        await _exporter.QueryGraphAsync();
-        List<Transaction> rawTransactions = _fetcher.Fetch();
-        CategoryAssignment? categorization = await _categorizer.CategorizeAsync(rawTransactions[10]);
+        // Step 1: Load categories
+        await _categoryProvider.LoadAsync();
 
-        if (categorization != null)
-        {
-            // export it
-        }
+        // Step 2: Fetch transactions
+        List<RawTransaction> rawTransactions = _fetcher.Fetch();
 
+        // Step 3: Match raw transaction to transaction type
+        List<Transaction> transactions = Matcher.Match(rawTransactions);
+
+        // Step 4: Categorize
+        var categorizedTransaction = await _categorizer.CategorizeAsync(transactions.First());
+
+        // TODO: I need to have telemetry inspector = net aspire
         /*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();
                                 List<Transaction> categorizedTransactions = [];
                                 foreach (var transaction in rawTransactions.Skip(2))

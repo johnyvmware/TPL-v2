@@ -1,0 +1,158 @@
+{
+  "categories": [
+    {
+      "name": "Housing",
+      "definition": "Primary residence costs and non-entertainment home services.",
+      "subcategories": [
+        {
+          "name": "Mortgage",
+          "definition": "Payments to mortgage lender."
+        },
+        {
+          "name": "Utilities",
+          "definition": "Electricity, water, sewage, trash."
+        },
+        {
+          "name": "Media",
+          "definition": "Home ISP, cable/satellite TV bundles, home phone."
+        },
+        {
+          "name": "Furniture",
+          "definition": "Furniture and fixtures for the home."
+        },
+        {
+          "name": "Consumables",
+          "definition": "Non-food consumables for home (cleaning, paper, detergents)."
+        },
+        {
+          "name": "Other housing",
+          "definition": "No confident match to any housing category."
+        }
+      ]
+    },
+    {
+      "name": "Food",
+      "definition": "Food and beverage for consumption, excluding groceries' non-food items.",
+      "subcategories": [
+        {
+          "name": "Groceries",
+          "definition": "Supermarkets and food-only groceries."
+        },
+        {
+          "name": "Other food",
+          "definition": "No confident match to any food category."
+        }
+      ]
+    },
+    {
+      "name": "Transport",
+      "definition": "Transportation and commuting, and private vehicle costs.",
+      "subcategories": [
+        {
+          "name": "Fuel",
+          "definition": "Vehicle fuels."
+        },
+        {
+          "name": "Public Transit",
+          "definition": "Buses, metro, train passes, trams, on-demand rides, taxis, parking facilities, meters."
+        },
+        {
+          "name": "Vehicle Service",
+          "definition": "Maintenance, repairs, parts, car wash."
+        },
+        {
+          "name": "Other transport",
+          "definition": "No confident match to any transport category."
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "definition": "Medical services and medicines.",
+      "subcategories": [
+        {
+          "name": "Doctor Clinics",
+          "definition": "General practitioners, specialists, clinics."
+        },
+        {
+          "name": "Pharmacy Drugstore",
+          "definition": "Prescription and OTC medicines."
+        },
+        {
+          "name": "Other health",
+          "definition": "No confident match to any health category."
+        }
+      ]
+    },
+    {
+      "name": "Charity",
+      "definition": "Donations to nonprofits, religious giving, fundraisers."
+    },
+    {
+      "name": "Education",
+      "definition": "Learning, education materials, and education fees.",
+      "subcategories": [
+        {
+          "name": "Courses",
+          "definition": "Tuition, course fees."
+        },
+        {
+          "name": "Books",
+          "definition": "Educational books, study materials and educational platforms."
+        },
+        {
+          "name": "Other education",
+          "definition": "No confident match to any education category."
+        }
+      ]
+    },
+    {
+      "name": "Lifestyle",
+      "definition": "Personal wear, beauty, and non-home hobbies gear.",
+      "subcategories": [
+        {
+          "name": "Clothing",
+          "definition": "Apparel, shoes, tailoring."
+        },
+        {
+          "name": "Beauty",
+          "definition": "Cosmetics, salons, barbers."
+        },
+        {
+          "name": "Gear",
+          "definition": "Tech, sports, and hobby items for personal lifestyle use."
+        },
+        {
+          "name": "Other lifestyle",
+          "definition": "No confident match to any lifestyle category."
+        }
+      ]
+    },
+    {
+      "name": "Entertainment",
+      "definition": "Spending on cultural and social activities like dining out, cultural events, and going out for fun.",
+      "subcategories": [
+        {
+          "name": "Recreation",
+		      "definition": "Spending on cultural events, entertainment venues, and recreational outings."
+		    },
+        {
+          "name": "Dining",
+          "definition": "Payments for restaurant meals, takeout, and food delivery services."
+        },
+        {
+          "name": "Other entertainment",
+          "definition": "No confident match to any entertainment category."
+        }
+      ]
+    },
+    {
+      "name": "Vacations",
+      "definition": "Trips and holidays outside daily commuting."
+    },
+    {
+      "name": "Investments",
+      "definition": "Investments, interest, bonds and loans."
+    }
+  ]
+}

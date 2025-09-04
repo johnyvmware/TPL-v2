@@ -1,16 +1,16 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using TransactionProcessingSystem.Services;
-using TransactionProcessingSystem.Components;
 using System.Text;
-using OpenAI.Chat;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
-using OpenTelemetry.Trace;
-using OpenTelemetry.Logs;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OpenAI.Chat;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Trace;
+using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Configuration.Validators;
+using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Services.Categorizer;
 
 namespace TransactionProcessingSystem.Configuration.Extensions;
@@ -34,9 +34,10 @@ public static class ServiceCollectionExtensions
     {
         services.AddTelemetry();
         services.AddDistributedMemoryCache(); // MemoryDistributedCache wraps around MemoryCache, but this lets us get started with the concept of distributed caching;
+        services.AddDatabase();
         services.AddFetcher();
         services.AddCategorizer();
-        services.AddExporter();
+        services.AddSingleton<Exporter>();
         services.AddHostedService<Worker>();
 
         return services;
@@ -49,6 +50,17 @@ public static class ServiceCollectionExtensions
              .WithTracing(builder => builder.AddSource(_telemetrySourceName).AddConsoleExporter());
 
         return services;
+    }
+
+    private static IServiceCollection AddDatabase(this IServiceCollection services)
+    {
+        return services.AddSingleton<IDatabaseService>(serviceProvider =>
+        {
+            var secrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
+            var settings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
+
+            return new DatabaseService(settings, secrets);
+        });
     }
 
     private static IServiceCollection AddFetcher(this IServiceCollection services)
@@ -64,11 +76,11 @@ public static class ServiceCollectionExtensions
     private static void AddCategorizer(this IServiceCollection services)
     {
         services.AddChatClient();
-        services.AddCategoriesProvider();
+        services.AddSingleton<CategoryProvider>();
         services.AddCategorizerImplementation();
 
         services.AddSingleton<AIFunctionService>();
-        services.AddSingleton<ICategoryService, CategoryService>();
+        services.AddSingleton<ICategoryValidator, CategoryService>();
     }
 
     private static IServiceCollection AddChatClient(this IServiceCollection services)
@@ -90,49 +102,17 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    private static IServiceCollection AddCategoriesProvider(this IServiceCollection services)
-    {
-        return services.AddSingleton<ICategoryProvider>(serviceProvider =>
-        {
-            ILogger<CategoryProvider> logger = serviceProvider.GetRequiredService<ILogger<CategoryProvider>>();
-            string categoriesFilePath = serviceProvider.GetRequiredService<IOptions<CategoriesOptions>>().Value.Path;
-            string absoluteCategoriesFilePath = Path.Combine(AppContext.BaseDirectory, categoriesFilePath);
-
-            if (!File.Exists(absoluteCategoriesFilePath))
-            {
-                throw new FileNotFoundException($"Category configuration file not found at: {absoluteCategoriesFilePath}");
-            }
-
-            CategoryProvider categoriesProvider = new(absoluteCategoriesFilePath, logger);
-            categoriesProvider.Load(); // Maybe this could be move to the pipeline and performed in a async manner
-
-            return categoriesProvider;
-        });
-    }
-
     private static IServiceCollection AddCategorizerImplementation(this IServiceCollection services)
     {
         return services.AddSingleton(serviceProvider =>
         {
             var chatClient = serviceProvider.GetRequiredService<IChatClient>();
             var distributedCache = serviceProvider.GetRequiredService<IDistributedCache>();
-            var categoriesService = serviceProvider.GetRequiredService<ICategoryService>();
+            var categoriesService = serviceProvider.GetRequiredService<ICategoryValidator>();
             var aIFunctionService = serviceProvider.GetRequiredService<AIFunctionService>();
             var llmSettings = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
 
             return new Categorizer(chatClient, distributedCache, categoriesService, aIFunctionService, llmSettings);
-        });
-    }
-
-    private static IServiceCollection AddExporter(this IServiceCollection services)
-    {
-        return services.AddSingleton(serviceProvider =>
-        {
-            var logger = serviceProvider.GetRequiredService<ILogger<Exporter>>();
-            var secrets = serviceProvider.GetRequiredService<IOptions<Neo4jSecrets>>().Value;
-            var settings = serviceProvider.GetRequiredService<IOptions<Neo4jOptions>>().Value;
-
-            return new Exporter(settings, secrets, logger);
         });
     }
 
@@ -158,7 +138,6 @@ public static class ServiceCollectionExtensions
     {
         // ValidateOnStart() registers the validation to run when the first service requiring IOptions<T>
         // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the host build phase.
-
         services
             .AddOptionsWithValidateOnStart<LlmOptions>()
             .Bind(configuration.GetRequiredSection(LlmOptions.SectionName))

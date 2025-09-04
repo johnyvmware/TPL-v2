@@ -1,0 +1,156 @@
+// show full graph
+MATCH (n)
+OPTIONAL MATCH (n)-[r]->(m)
+RETURN n, r, m
+
+// require a unique name on Category nodes
+CREATE CONSTRAINT category_name_unique IF NOT EXISTS FOR (c:Category) REQUIRE c.name IS UNIQUE;
+
+// require a definition on Category nodes
+CREATE CONSTRAINT category_definition_not_null IF NOT EXISTS FOR (c:Category) REQUIRE c.definition IS NOT NULL;
+
+// drop constraints
+DROP CONSTRAINT category_name_unique IF EXISTS;
+DROP CONSTRAINT category_definition_not_null IF EXISTS;
+
+// category : Primary / Secondary
+
+// Create main category nodes
+CREATE (:Category:Main {name: 'Housing', definition: 'Primary residence costs and non-entertainment home services.'})
+CREATE (:Category:Main {name: 'Food', definition: 'Food and beverage for consumption, excluding groceries\' non-food items.'})
+CREATE (:Category:Main {name: 'Transport', definition: 'Transportation and commuting, and private vehicle costs.'})
+CREATE (:Category:Main {name: 'Health', definition: 'Medical services and medicines.'})
+CREATE (:Category:Main {name: 'Charity', definition: 'Donations to nonprofits, religious giving, fundraisers.'})
+CREATE (:Category:Main {name: 'Education', definition: 'Learning, education materials, and education fees.'})
+CREATE (:Category:Main {name: 'Lifestyle', definition: 'Personal wear, beauty, and non-home hobbies gear.'})
+CREATE (:Category:Main {name: 'Entertainment', definition: 'Spending on cultural and social activities like dining out, cultural events, and going out for fun.'})
+CREATE (:Category:Main {name: 'Vacations', definition: 'Trips and holidays outside daily commuting.'})
+CREATE (:Category:Main {name: 'Investments', definition: 'Investments, interest, bonds and loans.'});
+CREATE (:Category:Main {name: 'Other', definition: 'No confident match to any category.'});
+
+
+// Create sub categories
+CREATE (:Category:Sub {name: 'Mortgage', definition: 'Payments to mortgage lender.'})
+CREATE (:Category:Sub {name: 'Utilities', definition: 'Electricity, water, sewage, trash.'})
+CREATE (:Category:Sub {name: 'Media', definition: 'Home ISP, cable/satellite TV bundles, home phone.'})
+CREATE (:Category:Sub {name: 'Furniture', definition: 'Furniture and fixtures for the home.'})
+CREATE (:Category:Sub {name: 'Consumables', definition: 'Non-food consumables for home (cleaning, paper, detergents).'})
+
+CREATE (:Category:Sub {name: 'Groceries', definition: 'Supermarkets and food-only groceries.'})
+
+CREATE (:Category:Sub {name: 'Fuel', definition: 'Vehicle fuels.'})
+CREATE (:Category:Sub {name: 'Public Transit', definition: 'Buses, metro, train passes, trams, on-demand rides, taxis, parking facilities, meters.'})
+CREATE (:Category:Sub {name: 'Vehicle Service', definition: 'Maintenance, repairs, parts, car wash.'})
+
+CREATE (:Category:Sub {name: 'Doctor Clinics', definition: 'General practitioners, specialists, clinics.'})
+CREATE (:Category:Sub {name: 'Pharmacy Drugstore', definition: 'Prescription and OTC medicines.'})
+
+CREATE (:Category:Sub {name: 'Courses', definition: 'Tuition, course fees.'})
+CREATE (:Category:Sub {name: 'Books', definition: 'Educational books, study materials and educational platforms.'})
+
+CREATE (:Category:Sub {name: 'Clothing', definition: 'Apparel, shoes, tailoring.'})
+CREATE (:Category:Sub {name: 'Beauty', definition: 'Cosmetics, salons, barbers.'})
+CREATE (:Category:Sub {name: 'Gear', definition: 'Tech, sports, and hobby items for personal lifestyle use.'})
+
+CREATE (:Category:Sub {name: 'Recreation', definition: 'Spending on cultural events, entertainment venues, and recreational outings.'})
+CREATE (:Category:Sub {name: 'Dining', definition: 'Payments for restaurant meals, takeout, and food delivery services.'})
+
+// Create Misc subcategories for each main category
+CREATE (:Category:Sub {name: 'Housing Misc', definition: 'Miscellaneous housing expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Food Misc', definition: 'Miscellaneous food expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Transport Misc', definition: 'Miscellaneous transportation expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Health Misc', definition: 'Miscellaneous health expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Charity Misc', definition: 'Miscellaneous charitable giving that doesn\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Education Misc', definition: 'Miscellaneous education expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Lifestyle Misc', definition: 'Miscellaneous lifestyle expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Entertainment Misc', definition: 'Miscellaneous entertainment expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Vacations Misc', definition: 'Miscellaneous vacation expenses that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Investments Misc', definition: 'Miscellaneous investment activities that don\'t fit other subcategories.'})
+CREATE (:Category:Sub {name: 'Other Misc', definition: 'Miscellaneous expenses that don\'t fit any category.'})
+
+// Create relationships for Misc subcategories
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Housing Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Food'}), (child:Category {name: 'Food Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Transport Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Health'}), (child:Category {name: 'Health Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Charity'}), (child:Category {name: 'Charity Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Education'}), (child:Category {name: 'Education Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Lifestyle Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Entertainment Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Vacations'}), (child:Category {name: 'Vacations Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Investments'}), (child:Category {name: 'Investments Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Other'}), (child:Category {name: 'Other Misc'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+
+// Create relationships
+
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Mortgage'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Utilities'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Media'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Furniture'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Housing'}), (child:Category {name: 'Consumables'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Food'}), (child:Category {name: 'Groceries'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Fuel'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Public Transit'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Transport'}), (child:Category {name: 'Vehicle Service'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Health'}), (child:Category {name: 'Doctor Clinics'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Health'}), (child:Category {name: 'Pharmacy Drugstore'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Education'}), (child:Category {name: 'Courses'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Education'}), (child:Category {name: 'Books'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Clothing'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Beauty'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Lifestyle'}), (child:Category {name: 'Gear'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Recreation'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+MATCH (parent:Category {name: 'Entertainment'}), (child:Category {name: 'Dining'}) CREATE (parent)-[:HAS_SUBCATEGORY]->(child);
+
+// Transaction modelling
+
+Type of transaction:
+- ZAKUP PRZY UŻYCIU KARTY - ok
+- BLIK ZAKUP E-COMMERCE - ok 
+- BLIK P2P-PRZYCHODZĄCY - ok 
+- PRZELEW ZEWNĘTRZNY WYCHODZĄCY - ok
+- PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY - ok
+- BLIK P2P-WYCHODZĄCY - ok
+- PRZELEW WEWNĘTRZNY PRZYCHODZĄCY - ok
+- PRZELEW WEWNĘTRZNY WYCHODZĄCY - ok
+
+// ignore 
+- POS ZWROT TOWARU
+- WYPŁATA W BANKOMACIE
+- BLIK KOR. ZAKUPU E-COMMERCE
+- BLIK WYPŁATA ATM KRAJOWY
+
+
+ZAKUP PRZY UŻYCIU KARTY:
+- sklep ( z tyutul)
+- miejscowosc (z tytul)
+
+PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY
+PRZELEW WEWNĘTRZNY PRZYCHODZĄCY
+- nadawca (z odbiorca / nadawca)
+- tytul (z tytul)
+
+PRZELEW ZEWNĘTRZNY WYCHODZĄCY
+PRZELEW WEWNĘTRZNY WYCHODZĄCY
+- odbiorca ( z odbiorca / nadawca)
+- tytul ( z tytul)
+
+BLIK ZAKUP E-COMMERCE:
+- sklep (z tytuł)
+
+BLIK P2P-PRZYCHODZĄCY:
+- nie dodawac podkategorii, to jest przelew na telefon przychodzacy
+
+BLIK P2P-WYCHODZĄCY:
+- nie dodawac podkategorii, to jest przelew na telefon wychodzacy
+- ale dziwne ze bank nie sledzi do kogo i jak
+
+--- 
+w prompt placeholder i wypelniac recordami jakos

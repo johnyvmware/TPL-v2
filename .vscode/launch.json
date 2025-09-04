@@ -6,6 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
+            "justMyCode": false,
             "program": "${workspaceFolder}/src/TransactionProcessingSystem/bin/Debug/net9.0/TransactionProcessingSystem.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/TransactionProcessingSystem",

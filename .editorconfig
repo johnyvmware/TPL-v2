@@ -1,3 +1,25 @@
+root = true
+
 [*.cs]
-# Suppress OPENAI001: Type is for evaluation purposes only and is subject to change or removal
+# Suppress experimental OpenAI notice
 dotnet_diagnostic.OPENAI001.severity = silent
+
+# Keep usings outside namespace 
+dotnet_diagnostic.SA1200.severity = none
+dotnet_diagnostic.SA1201.severity = none
+
+# Allow underscore private fields
+dotnet_diagnostic.SA1309.severity = none
+
+# Do not force 'this.'
+dotnet_diagnostic.SA1101.severity = none
+
+# This below and generate documentation in csproj is awful and I dont get it
+
+# Suppress undocumented members
+dotnet_diagnostic.CS1591.severity = silent
+dotnet_diagnostic.CS1573.severity = silent
+dotnet_diagnostic.CS1712.severity = silent
+
+# Disable all StyleCop documentation rules
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none

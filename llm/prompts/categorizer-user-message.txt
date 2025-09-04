@@ -1,0 +1,2 @@
+Categorize the following transaction details:
+{TransactionDescription}

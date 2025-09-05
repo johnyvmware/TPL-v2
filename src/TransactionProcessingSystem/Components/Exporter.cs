@@ -2,7 +2,6 @@
 
 namespace TransactionProcessingSystem.Components;
 
-public sealed class Exporter(IDatabaseService databaseService)
+public sealed class Exporter()
 {
-    private readonly IDatabaseService _databaseService = databaseService;
 }

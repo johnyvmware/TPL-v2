@@ -1,4 +1,4 @@
-# Based on Roslyn's default .editorconfig
+# Based on Roslyn's .editorconfig
 # EditorConfig is awesome: https://EditorConfig.org
 
 # top-most EditorConfig file
@@ -224,8 +224,6 @@ csharp_preserve_single_line_statements = true
 
 # IDE0060: Remove unused parameter
 dotnet_diagnostic.IDE0060.severity = warning
-
-[src/{Analyzers,CodeStyle,Features,Workspaces,EditorFeatures,VisualStudio}/**/*.{cs,vb}]
 
 # IDE0011: Add braces
 dotnet_diagnostic.IDE0011.severity = warning

@@ -45,18 +45,18 @@ public record CardPurchase(
 
         if (!string.IsNullOrEmpty(Store))
         {
-            sb.Append($"Store: {Store}\n");
+            sb.Append(FormattableString.Invariant($"Store: {Store}\n"));
         }
 
         if (!string.IsNullOrEmpty(Location))
         {
-            sb.Append($"Location: {Location}\n");
+            sb.Append(FormattableString.Invariant($"Location: {Location}\n"));
         }
 
         // Only include Title if either Store or Location is missing
         if (string.IsNullOrEmpty(Store) || string.IsNullOrEmpty(Location))
         {
-            sb.Append($"Title: {Title}\n");
+            sb.Append(FormattableString.Invariant($"Title: {Title}\n"));
         }
 
         return sb.ToString().TrimEnd('\n');
@@ -64,7 +64,7 @@ public record CardPurchase(
 
     private static (string StoreName, string Location) ParseDescription(string description)
     {
-        int dateIndex = description.IndexOf("DATA TRANSAKCJI:");
+        int dateIndex = description.IndexOf("DATA TRANSAKCJI:", StringComparison.InvariantCultureIgnoreCase);
         if (dateIndex > 0)
         {
             description = description[..dateIndex].Trim();

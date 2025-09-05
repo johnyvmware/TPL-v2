@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using TransactionProcessingSystem.Configuration.Extensions;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);

@@ -1,4 +1,4 @@
-namespace TransactionProcessingSystem.Services.Categorizer;
+﻿namespace TransactionProcessingSystem.Services.Categorizer;
 
 public record CategoryInfo
 {

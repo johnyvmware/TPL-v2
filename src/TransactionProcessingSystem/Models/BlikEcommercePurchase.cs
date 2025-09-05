@@ -1,5 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace TransactionProcessingSystem.Models;
 
@@ -8,12 +7,12 @@ public record BlikEcommercePurchase(
     decimal Amount,
     string Store) : Transaction(Date, Amount)
 {
-    private static readonly IReadOnlyCollection<string> SupportedTypes =
+    private static readonly IReadOnlyCollection<string> s_supportedTypes =
     [
         "BLIK ZAKUP E-COMMERCE"
     ];
 
-    private static bool IsSupportedType(string description) => SupportedTypes.Contains(description);
+    private static bool IsSupportedType(string description) => s_supportedTypes.Contains(description);
 
     protected override string DisplayName => "Blik E-Commerce Purchase";
 

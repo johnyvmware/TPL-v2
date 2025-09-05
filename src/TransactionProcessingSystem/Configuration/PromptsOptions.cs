@@ -1,5 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using Microsoft.Extensions.Options;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace TransactionProcessingSystem.Configuration;
 

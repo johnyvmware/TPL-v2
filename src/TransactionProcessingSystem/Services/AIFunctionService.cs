@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Microsoft.Extensions.AI;
 using TransactionProcessingSystem.Services.Categorizer;
 

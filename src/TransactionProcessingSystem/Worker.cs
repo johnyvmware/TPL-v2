@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Services.Categorizer;

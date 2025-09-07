@@ -6,7 +6,7 @@ using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Components;
 
-public class Fetcher(
+public partial class Fetcher(
     FetcherOptions settings,
     ILogger<Fetcher> logger)
 {
@@ -50,7 +50,7 @@ public class Fetcher(
             allTransactions.AddRange(fileTransactions);
         }
 
-        logger.LogDebug("Processing complete. Total transactions: {Total}, Bad records: {Bad}", allTransactions.Count, badRecords.Count);
+        LogProcessingCompleted(allTransactions.Count, badRecords.Count);
 
         var descriptionCounts = allTransactions
             .Where(t => !string.IsNullOrWhiteSpace(t.Description))
@@ -61,4 +61,9 @@ public class Fetcher(
 
         return allTransactions;
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Debug,
+        Message = "Processing complete. Total transactions: {total}, Bad records: {bad}")]
+    private partial void LogProcessingCompleted(int total, int bad);
 }

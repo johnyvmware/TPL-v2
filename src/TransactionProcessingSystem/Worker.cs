@@ -11,20 +11,20 @@ internal sealed class Worker : BackgroundService
     private readonly Fetcher _fetcher;
     private readonly Categorizer _categorizer;
     private readonly CategoryProvider _categoryProvider;
-    private readonly Exporter _exporter;
+    //private readonly Exporter _exporter;
 
     public Worker(
         IHostApplicationLifetime hostApplicationLifetime,
         Fetcher fetcher,
         Categorizer categorizer,
         CategoryProvider categoryProvider,
-        Exporter exporter)
+        Exporter _)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _fetcher = fetcher;
         _categorizer = categorizer;
         _categoryProvider = categoryProvider;
-        _exporter = exporter;
+        //_exporter = exporter;
 
         _hostApplicationLifetime.ApplicationStarted.Register(() =>
         {
@@ -49,7 +49,7 @@ internal sealed class Worker : BackgroundService
         List<Transaction> transactions = Matcher.Match(rawTransactions);
 
         // Step 4: Categorize
-        var categorizedTransaction = await _categorizer.CategorizeAsync(transactions.First());
+        _ = await _categorizer.CategorizeAsync(transactions.First());
 
         // TODO: I need to have telemetry inspector = net aspire
         /*         List<RawTransaction> rawTransactions = _fetcher.FetchTransactions();

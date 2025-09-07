@@ -1,5 +1,11 @@
 version: 2
 updates:
+  # Enable version updates for devcontainer
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+       interval: weekly
+
   # Enable version updates for NuGet packages
   - package-ecosystem: "nuget"
     directory: "/"

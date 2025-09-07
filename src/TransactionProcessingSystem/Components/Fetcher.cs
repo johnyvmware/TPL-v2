@@ -63,7 +63,7 @@ public partial class Fetcher(
     }
 
     [LoggerMessage(
-        Level = LogLevel.Information,
+        Level = LogLevel.Debug,
         Message = "Processing complete. Total transactions: {total}, Bad records: {bad}")]
     private partial void LogProcessingCompleted(int total, int bad);
 }

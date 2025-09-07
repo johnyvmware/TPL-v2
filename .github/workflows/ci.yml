@@ -52,15 +52,15 @@ jobs:
           --collect:"XPlat Code Coverage" --results-directory TestResults/ \
           --logger trx --settings coverlet.runsettings
       
-    - name: Publish test results
-      uses: dorny/test-reporter@v2
-      if: success() || failure()
-      with:
-        name: Test Results
-        path: TestResults/*.trx
-        reporter: dotnet-trx
-        fail-on-error: true
-      
+    #- name: Publish test results
+    #  uses: dorny/test-reporter@v2
+    #  if: success() || failure()
+    #  with:
+    #    name: Test Results
+    #    path: TestResults/*.trx
+    #    reporter: dotnet-trx
+    #    fail-on-error: true
+
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()

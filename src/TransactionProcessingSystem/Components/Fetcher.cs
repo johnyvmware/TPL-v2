@@ -2,6 +2,7 @@
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Configuration;
+using TransactionProcessingSystem.Configuration.Settings;
 using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Components;

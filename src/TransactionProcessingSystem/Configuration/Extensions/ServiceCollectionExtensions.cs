@@ -9,7 +9,8 @@ using OpenAI.Chat;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Trace;
 using TransactionProcessingSystem.Components;
-using TransactionProcessingSystem.Configuration.Validators;
+using TransactionProcessingSystem.Configuration.Secrets;
+using TransactionProcessingSystem.Configuration.Settings;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Services.Categorizer;
 
@@ -120,17 +121,12 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
-            .Bind(configuration.GetSection("OpenAI"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddOptionsWithValidateOnStart<MicrosoftGraphSecrets>()
-            .Bind(configuration.GetSection("MicrosoftGraph"))
+            .Bind(configuration.GetSection(OpenAISecrets.SectionName))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<Neo4jSecrets>()
-            .Bind(configuration.GetSection("Neo4j"))
+            .Bind(configuration.GetSection(Neo4jSecrets.SectionName))
             .ValidateDataAnnotations();
     }
 
@@ -144,34 +140,13 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<MicrosoftGraphOptions>()
-            .Bind(configuration.GetSection("MicrosoftGraph"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddOptionsWithValidateOnStart<ExportOptions>()
-            .Bind(configuration.GetSection("Export"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddSingleton<IValidateOptions<PipelineOptions>, MaxDegreeOfParallelismValidator>()
-            .AddOptionsWithValidateOnStart<PipelineOptions>()
-            .Bind(configuration.GetSection("Pipeline"))
-            .ValidateDataAnnotations();
-
-        services
             .AddOptionsWithValidateOnStart<Neo4jOptions>()
-            .Bind(configuration.GetSection("Neo4j"))
+            .Bind(configuration.GetSection(Neo4jOptions.SectionName))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<FetcherOptions>()
-            .Bind(configuration.GetSection("TransactionFetcher"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddOptionsWithValidateOnStart<CategoriesOptions>()
-            .Bind(configuration.GetSection(CategoriesOptions.SectionName))
+            .Bind(configuration.GetSection(FetcherOptions.SectionName))
             .ValidateDataAnnotations();
     }
 }

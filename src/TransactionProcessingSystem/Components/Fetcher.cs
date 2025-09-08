@@ -1,4 +1,4 @@
-﻿using CsvHelper;
+using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
 using TransactionProcessingSystem.Configuration;

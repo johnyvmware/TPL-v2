@@ -1,4 +1,4 @@
-﻿using TransactionProcessingSystem.Models;
+using TransactionProcessingSystem.Models;
 
 namespace TransactionProcessingSystem.Services.Categorizer;
 

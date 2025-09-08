@@ -1,4 +1,4 @@
-﻿using Neo4j.Driver.Mapping;
+using Neo4j.Driver.Mapping;
 
 namespace TransactionProcessingSystem.Services.Categorizer;
 

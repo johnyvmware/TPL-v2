@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
@@ -9,7 +9,8 @@ using OpenAI.Chat;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Trace;
 using TransactionProcessingSystem.Components;
-using TransactionProcessingSystem.Configuration.Validators;
+using TransactionProcessingSystem.Configuration.Secrets;
+using TransactionProcessingSystem.Configuration.Settings;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Services.Categorizer;
 
@@ -17,12 +18,12 @@ namespace TransactionProcessingSystem.Configuration.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    private const string _telemetrySourceName = "TransactionProcessingSystem";
+    private const string TelemetrySourceName = "TransactionProcessingSystem";
 
     public static IServiceCollection AddApplicationConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
-        ConfigureAppSettings(services, configuration);
-        ConfigureAppSecrets(services, configuration);
+        ConfigureSettings(services, configuration);
+        ConfigureSecrets(services, configuration);
 
         // Register code pages for Windows-1250 encoding support
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -47,7 +48,7 @@ public static class ServiceCollectionExtensions
     {
         services
              .AddOpenTelemetry()
-             .WithTracing(builder => builder.AddSource(_telemetrySourceName).AddConsoleExporter());
+             .WithTracing(builder => builder.AddSource(TelemetrySourceName).AddConsoleExporter());
 
         return services;
     }
@@ -95,7 +96,7 @@ public static class ServiceCollectionExtensions
                 .UseLogging()
                 .UseDistributedCache() // MemoryCache configured in the AddApplicationServices method
                 .UseFunctionInvocation()
-                .UseOpenTelemetry(sourceName: _telemetrySourceName, configure: c => c.EnableSensitiveData = true)
+                .UseOpenTelemetry(sourceName: TelemetrySourceName, configure: c => c.EnableSensitiveData = true)
                 .Build(serviceProvider);
 
             return chatClient;
@@ -116,62 +117,34 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    private static void ConfigureAppSecrets(IServiceCollection services, IConfiguration configuration)
+    private static void ConfigureSecrets(IServiceCollection services, IConfiguration configuration)
     {
         services
             .AddOptionsWithValidateOnStart<OpenAISecrets>()
-            .Bind(configuration.GetSection("OpenAI"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddOptionsWithValidateOnStart<MicrosoftGraphSecrets>()
-            .Bind(configuration.GetSection("MicrosoftGraph"))
+            .Bind(configuration.GetRequiredSection(OpenAISecrets.SectionName))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<Neo4jSecrets>()
-            .Bind(configuration.GetSection("Neo4j"))
+            .Bind(configuration.GetRequiredSection(Neo4jSecrets.SectionName))
             .ValidateDataAnnotations();
     }
 
-    private static void ConfigureAppSettings(IServiceCollection services, IConfiguration configuration)
+    private static void ConfigureSettings(IServiceCollection services, IConfiguration configuration)
     {
-        // ValidateOnStart() registers the validation to run when the first service requiring IOptions<T>
-        // is resolved, which typically happens during host.RunAsync(). It doesn't validate during the host build phase.
         services
             .AddOptionsWithValidateOnStart<LlmOptions>()
             .Bind(configuration.GetRequiredSection(LlmOptions.SectionName))
             .ValidateDataAnnotations();
 
         services
-            .AddOptionsWithValidateOnStart<MicrosoftGraphOptions>()
-            .Bind(configuration.GetSection("MicrosoftGraph"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddOptionsWithValidateOnStart<ExportOptions>()
-            .Bind(configuration.GetSection("Export"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddSingleton<IValidateOptions<PipelineOptions>, MaxDegreeOfParallelismValidator>()
-            .AddOptionsWithValidateOnStart<PipelineOptions>()
-            .Bind(configuration.GetSection("Pipeline"))
-            .ValidateDataAnnotations();
-
-        services
             .AddOptionsWithValidateOnStart<Neo4jOptions>()
-            .Bind(configuration.GetSection("Neo4j"))
+            .Bind(configuration.GetSection(Neo4jOptions.SectionName))
             .ValidateDataAnnotations();
 
         services
             .AddOptionsWithValidateOnStart<FetcherOptions>()
-            .Bind(configuration.GetSection("TransactionFetcher"))
-            .ValidateDataAnnotations();
-
-        services
-            .AddOptionsWithValidateOnStart<CategoriesOptions>()
-            .Bind(configuration.GetSection(CategoriesOptions.SectionName))
+            .Bind(configuration.GetSection(FetcherOptions.SectionName))
             .ValidateDataAnnotations();
     }
 }

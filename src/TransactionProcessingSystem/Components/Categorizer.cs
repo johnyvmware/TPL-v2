@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
-using TransactionProcessingSystem.Configuration;
+using TransactionProcessingSystem.Configuration.Settings;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Services;
 using TransactionProcessingSystem.Services.Categorizer;

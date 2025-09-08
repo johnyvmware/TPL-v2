@@ -8,6 +8,14 @@
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 
+	// Environment variables
+	"containerEnv": {
+  		"OpenAI__ApiKey": "${localEnv:OpenAI__ApiKey}",
+  		"Neo4j__User": "${localEnv:Neo4j__User}",
+  		"Neo4j__Password": "${localEnv:Neo4j__Password}",
+  		"Neo4j__Uri": "${localEnv:Neo4j__Uri}"
+	},
+
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [5000, 5001],
 	// "portsAttributes": {

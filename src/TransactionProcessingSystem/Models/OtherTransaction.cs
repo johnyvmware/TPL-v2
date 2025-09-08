@@ -1,4 +1,4 @@
-﻿namespace TransactionProcessingSystem.Models;
+namespace TransactionProcessingSystem.Models;
 
 public record OtherTransaction(
     DateTime Date,

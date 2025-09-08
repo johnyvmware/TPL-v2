@@ -1,4 +1,4 @@
-﻿namespace TransactionProcessingSystem.Models;
+namespace TransactionProcessingSystem.Models;
 
 public abstract record Transaction(DateTime Date, decimal Amount)
 {

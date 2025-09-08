@@ -1,0 +1,12 @@
+# Normalize to LF in repo
+* text=auto eol=lf
+
+# Common binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.xz binary

@@ -1,4 +1,4 @@
-﻿using Neo4j.Driver;
+using Neo4j.Driver;
 using Neo4j.Driver.Mapping;
 
 namespace TransactionProcessingSystem.Services.Categorizer;
@@ -9,6 +9,8 @@ public class CategoryProvider(IDatabaseService databaseService)
 
     public async Task LoadAsync()
     {
+        await databaseService.VerifyConnectionAsync();
+
         var loadCategoriesCypher = """
             MATCH (main:Category:Main)-[:HAS_SUBCATEGORY]->(sub:Category:Sub)
             WITH main, collect({name: sub.name, definition: sub.definition}) AS subcategories

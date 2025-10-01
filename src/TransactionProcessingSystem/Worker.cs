@@ -11,6 +11,7 @@ internal sealed class Worker : BackgroundService
     private readonly Fetcher _fetcher;
     private readonly Categorizer _categorizer;
     private readonly CategoryProvider _categoryProvider;
+    private readonly Enricher _enricher;
     //private readonly Exporter _exporter;
 
     public Worker(
@@ -18,12 +19,14 @@ internal sealed class Worker : BackgroundService
         Fetcher fetcher,
         Categorizer categorizer,
         CategoryProvider categoryProvider,
+        Enricher enricher,
         Exporter _)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _fetcher = fetcher;
         _categorizer = categorizer;
         _categoryProvider = categoryProvider;
+        _enricher = enricher;
         //_exporter = exporter;
 
         _hostApplicationLifetime.ApplicationStarted.Register(() =>
@@ -39,6 +42,7 @@ internal sealed class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await _enricher.EnrichAsync(DateTime.UtcNow.AddDays(-7), DateTime.UtcNow);
         // Step 1: Load categories
         await _categoryProvider.LoadAsync();
 

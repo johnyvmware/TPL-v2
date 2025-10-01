@@ -12,10 +12,6 @@ public sealed class MicrosoftGraphService : IDisposable
 
     public MicrosoftGraphService(MicrosoftGraphOptions settings, MicrosoftGraphSecrets secrets)
     {
-        // Token cache will be stored in /root/.msal/tokencache.bin
-        var tokenCachePath = Path.Combine("/root/.msal", "tokencache.bin");
-        Directory.CreateDirectory(Path.GetDirectoryName(tokenCachePath)!);
-
         var credential = new DeviceCodeCredential(new DeviceCodeCredentialOptions
         {
             ClientId = secrets.ClientId,
@@ -23,7 +19,6 @@ public sealed class MicrosoftGraphService : IDisposable
             TokenCachePersistenceOptions = new TokenCachePersistenceOptions
             {
                 Name = "msal_cache",
-                UnsafeAllowUnencryptedStorage = true // Safe in dev container
             },
             DeviceCodeCallback = (code, cancellation) =>
             {

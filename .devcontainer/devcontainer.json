@@ -5,9 +5,9 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/dotnet:1-9.0-bookworm",
 
-	"mounts": [
-		"source=${localWorkspaceFolder}/.msal,target=/root/.msal,type=bind"
-	],
+	//"mounts": [
+	//	"source=${localWorkspaceFolder}/.msal,target=/root/.msal,type=bind"
+	//],
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
@@ -17,7 +17,9 @@
   		"OpenAI__ApiKey": "${localEnv:OpenAI__ApiKey}",
   		"Neo4j__User": "${localEnv:Neo4j__User}",
   		"Neo4j__Password": "${localEnv:Neo4j__Password}",
-  		"Neo4j__Uri": "${localEnv:Neo4j__Uri}"
+  		"Neo4j__Uri": "${localEnv:Neo4j__Uri}",
+		"MicrosoftGraph__ClientId": "${localEnv:MicrosoftGraph__ClientId}",
+		"MicrosoftGraph__TenantId": "${localEnv:MicrosoftGraph__TenantId}"
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

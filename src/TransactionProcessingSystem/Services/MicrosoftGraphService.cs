@@ -16,10 +16,7 @@ public sealed class MicrosoftGraphService : IDisposable
         {
             ClientId = secrets.ClientId,
             TenantId = secrets.TenantId,
-            TokenCachePersistenceOptions = new TokenCachePersistenceOptions
-            {
-                Name = "msal_cache",
-            },
+            TokenCachePersistenceOptions = null,
             DeviceCodeCallback = (code, cancellation) =>
             {
                 Console.WriteLine("\n🔐 Authentication Required");
@@ -36,17 +33,29 @@ public sealed class MicrosoftGraphService : IDisposable
 
     public async Task<MessageCollectionResponse?> GetEmailsAsync(DateTime from, DateTime to)
     {
-        var messages = await _graphClient.Me.Messages
-            .GetAsync(requestConfiguration =>
-            {
-                requestConfiguration.QueryParameters.Filter =
-                    $"receivedDateTime ge {from:yyyy-MM-ddTHH:mm:ssZ} and receivedDateTime le {to:yyyy-MM-ddTHH:mm:ssZ}";
-                requestConfiguration.QueryParameters.Select = ["subject", "from", "receivedDateTime", "bodyPreview"];
-                requestConfiguration.QueryParameters.Top = 50;
-                requestConfiguration.QueryParameters.Orderby = ["receivedDateTime DESC"];
-            });
+        try
+        {
+            // Test authentication first
+            var user = await _graphClient.Me.GetAsync();
+            Console.WriteLine($"✓ Authenticated as: {user?.DisplayName}");
 
-        return messages;
+            var messages = await _graphClient.Me.Messages
+                .GetAsync(requestConfiguration =>
+                {
+                    requestConfiguration.QueryParameters.Filter =
+                        $"receivedDateTime ge {from:yyyy-MM-ddTHH:mm:ssZ} and receivedDateTime le {to:yyyy-MM-ddTHH:mm:ssZ}";
+                    requestConfiguration.QueryParameters.Select = ["subject", "from", "receivedDateTime", "bodyPreview"];
+                    requestConfiguration.QueryParameters.Top = 50;
+                    requestConfiguration.QueryParameters.Orderby = ["receivedDateTime DESC"];
+                });
+
+            return messages;
+        }
+        catch (Azure.Identity.AuthenticationFailedException ex)
+        {
+            Console.WriteLine($"❌ Authentication failed: {ex.Message}");
+            throw;
+        }
     }
 
     public void Dispose()

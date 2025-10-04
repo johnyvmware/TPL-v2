@@ -40,7 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddCategorizer();
         services.AddEnricher();
         services.AddSingleton<Exporter>();
-        services.AddHostedService<Worker>();
+        services.AddSingleton<Worker>();
 
         return services;
     }

@@ -71,6 +71,7 @@ public static class ServiceCollectionExtensions
         {
             var logger = serviceProvider.GetRequiredService<ILogger<Fetcher>>();
             var settings = serviceProvider.GetRequiredService<IOptions<FetcherOptions>>().Value;
+
             return new Fetcher(settings, logger);
         });
     }

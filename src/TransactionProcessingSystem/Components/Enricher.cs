@@ -1,8 +1,4 @@
 using System.Text;
-using Azure.Identity;
-using Microsoft.Graph;
-using Microsoft.Identity.Client;
-using Microsoft.Identity.Client.Extensions.Msal;
 using TransactionProcessingSystem.Services;
 
 namespace TransactionProcessingSystem.Components;
@@ -11,6 +7,7 @@ public class Enricher(MicrosoftGraphService graphService)
 {
     public async Task<string> EnrichAsync(DateTime from, DateTime to)
     {
+        //await graphService.GetEmailsAsync();
         var emails = await graphService.GetEmailsAsync(from, to);
         if (emails == null || emails.Value == null || emails.Value.Count == 0)
         {

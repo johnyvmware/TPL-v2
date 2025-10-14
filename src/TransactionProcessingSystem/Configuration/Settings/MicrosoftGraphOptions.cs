@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace TransactionProcessingSystem.Configuration.Settings;
@@ -9,4 +8,7 @@ public record MicrosoftGraphOptions
 
     [Required]
     public required string[] Scopes { get; init; }
+
+    [Required]
+    public required string TokenName { get; init; }
 }

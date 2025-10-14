@@ -12,22 +12,23 @@ public sealed class MicrosoftGraphService : IDisposable
 
     public MicrosoftGraphService(MicrosoftGraphOptions settings, MicrosoftGraphSecrets secrets)
     {
-        var credential = new DeviceCodeCredential(new DeviceCodeCredentialOptions
+        var options = new DeviceCodeCredentialOptions
         {
-            ClientId = secrets.ClientId,
             TenantId = secrets.TenantId,
-            TokenCachePersistenceOptions = null,
-            DeviceCodeCallback = (code, cancellation) =>
+            ClientId = secrets.ClientId,
+            TokenCachePersistenceOptions = new TokenCachePersistenceOptions
             {
-                Console.WriteLine("\n🔐 Authentication Required");
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine($"Please visit: {code.VerificationUri}");
-                Console.WriteLine($"Enter code: {code.UserCode}");
-                Console.WriteLine("═══════════════════════════════════════\n");
+                Name = settings.TokenName,
+                UnsafeAllowUnencryptedStorage = true
+            },
+            DeviceCodeCallback = (code, _) =>
+            {
+                Console.WriteLine(code.Message);
                 return Task.CompletedTask;
             }
-        });
+        };
 
+        var credential = new DeviceCodeCredential(options);
         _graphClient = new GraphServiceClient(credential, settings.Scopes);
     }
 

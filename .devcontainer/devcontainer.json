@@ -33,6 +33,7 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "dotnet restore",
+	"postCreateCommand": "sudo mkdir -p /home/vscode/.tokens && sudo chown -R vscode /home/vscode/.tokens",
 
 	// Configure tool-specific properties.
 	"customizations": {

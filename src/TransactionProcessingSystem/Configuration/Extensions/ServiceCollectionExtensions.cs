@@ -38,8 +38,9 @@ public static class ServiceCollectionExtensions
         services.AddDatabase();
         services.AddFetcher();
         services.AddCategorizer();
+        services.AddEnricher();
         services.AddSingleton<Exporter>();
-        services.AddHostedService<Worker>();
+        services.AddSingleton<Worker>();
 
         return services;
     }
@@ -70,8 +71,21 @@ public static class ServiceCollectionExtensions
         {
             var logger = serviceProvider.GetRequiredService<ILogger<Fetcher>>();
             var settings = serviceProvider.GetRequiredService<IOptions<FetcherOptions>>().Value;
+
             return new Fetcher(settings, logger);
         });
+    }
+
+    private static IServiceCollection AddEnricher(this IServiceCollection services)
+    {
+        services.AddSingleton(serviceProvider =>
+        {
+            var settings = serviceProvider.GetRequiredService<IOptions<MicrosoftGraphOptions>>().Value;
+            var secrets = serviceProvider.GetRequiredService<IOptions<MicrosoftGraphSecrets>>().Value;
+            return new MicrosoftGraphService(settings, secrets);
+        });
+
+        return services.AddSingleton<Enricher>();
     }
 
     private static void AddCategorizer(this IServiceCollection services)
@@ -128,6 +142,11 @@ public static class ServiceCollectionExtensions
             .AddOptionsWithValidateOnStart<Neo4jSecrets>()
             .Bind(configuration.GetRequiredSection(Neo4jSecrets.SectionName))
             .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<MicrosoftGraphSecrets>()
+            .Bind(configuration.GetRequiredSection(MicrosoftGraphSecrets.SectionName))
+            .ValidateDataAnnotations();
     }
 
     private static void ConfigureSettings(IServiceCollection services, IConfiguration configuration)
@@ -145,6 +164,11 @@ public static class ServiceCollectionExtensions
         services
             .AddOptionsWithValidateOnStart<FetcherOptions>()
             .Bind(configuration.GetSection(FetcherOptions.SectionName))
+            .ValidateDataAnnotations();
+
+        services
+            .AddOptionsWithValidateOnStart<MicrosoftGraphOptions>()
+            .Bind(configuration.GetSection(MicrosoftGraphOptions.SectionName))
             .ValidateDataAnnotations();
     }
 }

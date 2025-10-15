@@ -1,44 +1,34 @@
-using Microsoft.Extensions.Hosting;
 using TransactionProcessingSystem.Components;
 using TransactionProcessingSystem.Models;
 using TransactionProcessingSystem.Services.Categorizer;
 
 namespace TransactionProcessingSystem;
 
-internal sealed class Worker : BackgroundService
+internal sealed class Worker
 {
-    private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly Fetcher _fetcher;
     private readonly Categorizer _categorizer;
     private readonly CategoryProvider _categoryProvider;
+    private readonly Enricher _enricher;
     //private readonly Exporter _exporter;
 
     public Worker(
-        IHostApplicationLifetime hostApplicationLifetime,
         Fetcher fetcher,
         Categorizer categorizer,
         CategoryProvider categoryProvider,
+        Enricher enricher,
         Exporter _)
     {
-        _hostApplicationLifetime = hostApplicationLifetime;
         _fetcher = fetcher;
         _categorizer = categorizer;
         _categoryProvider = categoryProvider;
+        _enricher = enricher;
         //_exporter = exporter;
-
-        _hostApplicationLifetime.ApplicationStarted.Register(() =>
-        {
-            Console.WriteLine("Transaction Processing System started.");
-        });
-
-        _hostApplicationLifetime.ApplicationStopped.Register(() =>
-        {
-            Console.WriteLine("Transaction Processing System stopped.");
-        });
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task ExecuteAsync()
     {
+        await _enricher.EnrichAsync(DateTime.UtcNow.AddDays(-7), DateTime.UtcNow);
         // Step 1: Load categories
         await _categoryProvider.LoadAsync();
 
@@ -62,7 +52,5 @@ internal sealed class Worker : BackgroundService
                                         categorizedTransactions.Add(categorizedTransaction);
                                     }
                                 } */
-
-        _hostApplicationLifetime.StopApplication();
     }
 }

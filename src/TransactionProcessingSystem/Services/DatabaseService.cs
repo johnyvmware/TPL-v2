@@ -1,5 +1,4 @@
 using Neo4j.Driver;
-using TransactionProcessingSystem.Configuration;
 using TransactionProcessingSystem.Configuration.Secrets;
 using TransactionProcessingSystem.Configuration.Settings;
 

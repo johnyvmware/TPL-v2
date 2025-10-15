@@ -1,8 +1,8 @@
-using TransactionProcessingSystem.Configuration.Secrets;
-using TransactionProcessingSystem.Configuration.Settings;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Graph.Models.ODataErrors;
+using TransactionProcessingSystem.Configuration.Secrets;
+using TransactionProcessingSystem.Configuration.Settings;
 
 namespace TransactionProcessingSystem.Services;
 

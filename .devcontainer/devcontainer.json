@@ -19,7 +19,8 @@
   		"Neo4j__Password": "${localEnv:Neo4j__Password}",
   		"Neo4j__Uri": "${localEnv:Neo4j__Uri}",
 		"MicrosoftGraph__ClientId": "${localEnv:MicrosoftGraph__ClientId}",
-		"MicrosoftGraph__TenantId": "${localEnv:MicrosoftGraph__TenantId}"
+		"MicrosoftGraph__TenantId": "${localEnv:MicrosoftGraph__TenantId}",
+		"MicrosoftGraph__CacheDirectory": "/home/vscode/.tokens"
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

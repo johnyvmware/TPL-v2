@@ -1,46 +1,26 @@
 using TransactionProcessingSystem.Configuration.Secrets;
 using TransactionProcessingSystem.Configuration.Settings;
 using Microsoft.Graph;
-using Azure.Identity;
 using Microsoft.Graph.Models;
+using Microsoft.Graph.Models.ODataErrors;
 
 namespace TransactionProcessingSystem.Services;
 
-public sealed class MicrosoftGraphService : IDisposable
+public sealed class MicrosoftGraphService(MicrosoftGraphOptions settings, MicrosoftGraphSecrets secrets) : IDisposable
 {
-    private readonly GraphServiceClient _graphClient;
-
-    public MicrosoftGraphService(MicrosoftGraphOptions settings, MicrosoftGraphSecrets secrets)
-    {
-        var options = new DeviceCodeCredentialOptions
-        {
-            TenantId = secrets.TenantId,
-            ClientId = secrets.ClientId,
-            TokenCachePersistenceOptions = new TokenCachePersistenceOptions
-            {
-                Name = settings.TokenName,
-                UnsafeAllowUnencryptedStorage = true
-            },
-            DeviceCodeCallback = (code, _) =>
-            {
-                Console.WriteLine(code.Message);
-                return Task.CompletedTask;
-            }
-        };
-
-        var credential = new DeviceCodeCredential(options);
-        _graphClient = new GraphServiceClient(credential, settings.Scopes);
-    }
+    private GraphServiceClient? _graphClient;
+    private readonly SemaphoreSlim _initializationLock = new(1, 1);
 
     public async Task<MessageCollectionResponse?> GetEmailsAsync(DateTime from, DateTime to)
     {
         try
         {
-            // Test authentication first
-            var user = await _graphClient.Me.GetAsync();
+            var graphClient = await InitializeGraphClientAsync();
+
+            var user = await graphClient.Me.GetAsync();
             Console.WriteLine($"✓ Authenticated as: {user?.DisplayName}");
 
-            var messages = await _graphClient.Me.Messages
+            var messages = await graphClient.Me.Messages
                 .GetAsync(requestConfiguration =>
                 {
                     requestConfiguration.QueryParameters.Filter =
@@ -52,9 +32,14 @@ public sealed class MicrosoftGraphService : IDisposable
 
             return messages;
         }
-        catch (Azure.Identity.AuthenticationFailedException ex)
+        catch (ODataError odataError)
         {
-            Console.WriteLine($"❌ Authentication failed: {ex.Message}");
+            Console.WriteLine($"❌ Graph API error: {odataError.Error?.Code} - {odataError.Error?.Message}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ An unexpected error occurred: {ex.Message}");
             throw;
         }
     }
@@ -62,5 +47,37 @@ public sealed class MicrosoftGraphService : IDisposable
     public void Dispose()
     {
         _graphClient?.Dispose();
+        _initializationLock.Dispose();
+    }
+
+    private async Task<GraphServiceClient> InitializeGraphClientAsync()
+    {
+        if (_graphClient is not null)
+        {
+            return _graphClient;
+        }
+
+        await _initializationLock.WaitAsync();
+
+        try
+        {
+            if (_graphClient is null)
+            {
+                var authProvider = await MsalAuthenticationProvider.CreateAsync(
+                    secrets.ClientId,
+                    secrets.TenantId,
+                    settings.Scopes,
+                    settings.CacheFileName,
+                    settings.CacheDirectory);
+
+                _graphClient = new GraphServiceClient(authProvider);
+            }
+        }
+        finally
+        {
+            _initializationLock.Release();
+        }
+
+        return _graphClient;
     }
 }

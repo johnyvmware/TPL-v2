@@ -4,7 +4,10 @@
 	"name": "C# (.NET)",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/dotnet:1-9.0-bookworm",
-	"mounts": ["source=tpl-identity-server,target=/home/vscode/.IdentityService,type=volume"],
+
+	"mounts": [
+		"type=volume,source=devcontainer-tokens,target=/home/vscode/.tokens"
+	],
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

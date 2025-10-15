@@ -10,5 +10,8 @@ public record MicrosoftGraphOptions
     public required string[] Scopes { get; init; }
 
     [Required]
-    public required string TokenName { get; init; }
+    public required string CacheFileName { get; init; }
+
+    [Required]
+    public required string CacheDirectory { get; init; }
 }
